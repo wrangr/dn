@@ -1,15 +1,9 @@
 //
-//
-//
-
-
-//
 // Deps
 //
-var util = require('util');
 var dns = require('dns');
-var request = require('request');
 var url = require('url');
+var request = require('request');
 var BluebirdPromise = require('bluebird');
 var psl = require('psl');
 
@@ -20,32 +14,8 @@ var psl = require('psl');
 
 var dn = module.exports = {};
 
-//
-// Errors
-//
-
-// Copy error codes from `psl`
-Object.keys(psl.errorCodes).forEach(function (k) {
-  dn[k] = psl.errorCodes[k];
-});
-
-dn.DOMAIN_NOT_LISTED = 'Domain name does not belong to any known public suffix.';
-dn.NS_NOT_FOUND = 'No name servers found for domain.';
-dn.NS_NO_DATA = 'Empty response from server.';
-
-dn.ParseError = function ParseError(obj) {
-  Error.call(this);
-  Error.captureStackTrace(this, arguments.callee);
-  this.message = obj.message;
-  this.code = obj.code;
-  this.kind = 'parse';
-};
-
-util.inherits(dn.ParseError, Error);
-
-dn.NetworkError = function NetworkError(message, code) {
-};
-
+// Extend with error stuff.
+require('./lib/error')(dn);
 
 dn.parse = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
