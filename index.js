@@ -1,36 +1,164 @@
+//
+//
+//
+
+
+//
+// Deps
+//
+var util = require('util');
 var dns = require('dns');
+var request = require('request');
+var url = require('url');
+var BluebirdPromise = require('bluebird');
 var psl = require('psl');
 
 
-exports.baseurl = function (domain, cb) {
+//
+// Public API
+//
 
+var dn = module.exports = {};
+
+//
+// Errors
+//
+
+// Copy error codes from `psl`
+Object.keys(psl.errorCodes).forEach(function (k) {
+  dn[k] = psl.errorCodes[k];
+});
+
+dn.DOMAIN_NOT_LISTED = 'Domain name does not belong to any known public suffix.';
+dn.NS_NOT_FOUND = 'No name servers found for domain.';
+dn.NS_NO_DATA = 'Empty response from server.';
+
+dn.ParseError = function ParseError(obj) {
+  Error.call(this);
+  Error.captureStackTrace(this, arguments.callee);
+  this.message = obj.message;
+  this.code = obj.code;
+  this.kind = 'parse';
 };
 
-exports.probe = function (domain, cb) {
+util.inherits(dn.ParseError, Error);
 
-  var info = {
-    input: domain,
-    isRegistered: false,
-    isWww: false,
-    isSubdomain: false,
-    isRedirect: false,
-    dns: [],
-    baseurl: null
+dn.NetworkError = function NetworkError(message, code) {
+};
+
+
+dn.parse = function (domain) {
+  return new BluebirdPromise(function (resolve, reject) {
+    try {
+      var parsed = psl.parse(domain);
+      if (parsed.error) {
+        return reject(new dn.ParseError(parsed.error));
+      }
+      if (!parsed.listed) {
+        return reject(new dn.ParseError({
+          message: dn.DOMAIN_NOT_LISTED,
+          code: 'DOMAIN_NOT_LISTED',
+        }));
+      }
+      resolve(parsed);
+    } catch (err) {
+      return reject(err);
+    }
+  });
+};
+
+// Resolve name servers.
+dn.ns = function (domain) {
+  return new BluebirdPromise(function (resolve, reject) {
+    dns.resolveNs(domain, function (err, ns) {
+      if (err) {
+        if (err.code === dns.NODATA) {
+        } else if (err.code === dns.NOTFOUND) {
+          reject(err);
+        } else {
+          return reject(err);
+        }
+      }
+      resolve(ns);
+    });
+  });
+};
+
+dn.resolve = function (domain) {
+  return new BluebirdPromise(function (resolve, reject) {
+    dns.resolve(domain, function (err, addresses) {
+      if (err) { return reject(err); }
+      resolve(addresses);
+    });
+  });
+};
+
+dn.baseurl = function (domain) {
+  var urlObj = {
+    protocol: 'http:',
+    hostname: domain
   };
 
-  var parsed = psl.parse(domain);
+  var reqOpt = {
+    url: url.format(urlObj),
+    method: 'HEAD'
+  };
 
-  if (parsed.error) {
-    return cb(null, info);
-  }
+  return new BluebirdPromise(function (resolve, reject) {
+    function handleBaseurl(href) {
+      var ret = { href: href };
+      var hrefObj = url.parse(href);
+      ret.isExternalRedirect = (hrefObj.hostname !== urlObj.hostname);
+      ret.forceSSL = (hrefObj.protocol !== urlObj.protocol);
+      resolve(ret);
+    }
 
-  info.parsed = parsed;
+    request(reqOpt, function (err, res) {
+      if (err && err.code === 'HPE_INVALID_CONSTANT') {
+        // In some weird cases we get http parse errors when using the `HEAD`
+        // method, so when that happens try a GET request.
+        // See:
+        // https://github.com/mikeal/request/issues/350
+        // https://github.com/joyent/node/issues/4863
+        reqOpt.method = 'GET';
+        request(reqOpt, function (err, res) {
+          if (err) { return reject(err); }
+          handleBaseurl(res.request.href);
+        });
+      } else if (err) {
+        reject(err);
+      } else {
+        handleBaseurl(res.request.href);
+      }
+    });
+  });
+};
 
-  // Resolve name servers.
-  dns.resolveNs(domain, function (err, addresses) {
-    if (err) { return cb(err); }
-    info.dns = addresses;
-    cb(null, info);
+dn.probe = function (domain) {
+
+  var info = { input: domain };
+
+  return new BluebirdPromise(function (resolve, reject) {
+
+    dn.parse(domain).then(function (parsed) {
+      info.parsed = parsed;
+      return dn.ns(domain);
+    }).then(function (ns) {
+      if (!ns) { return resolve(info); }
+      info.ns = ns;
+      return dn.resolve(domain);
+    }).then(function (addresses) {
+      if (!addresses) { return resolve(info); }
+      info.addresses = addresses;
+      return dn.baseurl(domain);
+    }).then(function (baseurl) {
+      if (!baseurl) { return resolve(info); }
+      info.baseurl = baseurl;
+      resolve(info);
+    }).error(function (err) {
+      reject(err);
+    });
+
   });
 
 };

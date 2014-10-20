@@ -14,14 +14,17 @@ module.exports = function (grunt) {
 
     shell: {
       test: {
-        command: './node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha test/test-index.js'
+        command: './node_modules/.bin/mocha test/test-*.js'
+      },
+      cover: {
+        command: './node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha test/test-*.js'
       }
     },
 
     watch: {
       all: {
         files: [ '<%= jshint.files %>' ],
-        tasks: [ 'test' ]
+        tasks: [ 'jshint', 'shell:test' ]
       }
     }
 
@@ -32,6 +35,6 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-shell');
 
   grunt.registerTask('default', [ 'test' ]);
-  grunt.registerTask('test', [ 'jshint', 'shell:test' ]);
+  grunt.registerTask('test', [ 'jshint', 'shell:cover' ]);
 
 };

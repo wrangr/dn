@@ -13,7 +13,9 @@
   "author": "Lupo Montero",
   "license": "MIT",
   "dependencies": {
-    "psl": "^1.0.1"
+    "bluebird": "^2.3.6",
+    "psl": "^1.0.1",
+    "request": "^2.45.0"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
