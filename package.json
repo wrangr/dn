@@ -7,6 +7,7 @@
     "url": "git@github.com:wrangr/d.git"
   },
   "main": "index.js",
+  "bin": { "dn": "./bin/cli.js" },
   "scripts": {
     "test": "grunt test --verbose"
   },

@@ -17,6 +17,7 @@ var dn = module.exports = {};
 // Extend with error stuff.
 require('./lib/error')(dn);
 
+
 dn.parse = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
     try {
@@ -37,14 +38,16 @@ dn.parse = function (domain) {
   });
 };
 
+
 // Resolve name servers.
 dn.ns = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
     dns.resolveNs(domain, function (err, ns) {
       if (err) {
         if (err.code === dns.NODATA) {
+          reject(new dn.DNSError('NS_NO_DATA'));
         } else if (err.code === dns.NOTFOUND) {
-          reject(err);
+          reject(new dn.DNSError('NS_NOT_FOUND'));
         } else {
           return reject(err);
         }
@@ -54,6 +57,7 @@ dn.ns = function (domain) {
   });
 };
 
+
 dn.resolve = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
     dns.resolve(domain, function (err, addresses) {
@@ -62,6 +66,7 @@ dn.resolve = function (domain) {
     });
   });
 };
+
 
 dn.baseurl = function (domain) {
   var urlObj = {
@@ -114,7 +119,7 @@ dn.probe = function (domain) {
       info.parsed = parsed;
       return dn.ns(domain);
     }).then(function (ns) {
-      if (!ns) { return resolve(info); }
+      if (!ns || !ns.length) { return resolve(info); }
       info.ns = ns;
       return dn.resolve(domain);
     }).then(function (addresses) {

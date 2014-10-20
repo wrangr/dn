@@ -8,6 +8,8 @@ module.exports = function (grunt) {
       files: [
         'Gruntfile.js',
         'index.js',
+        'bin/**/*.js',
+        'lib/**/*.js',
         'test/**/*.js'
       ]
     },

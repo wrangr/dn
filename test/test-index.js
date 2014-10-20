@@ -40,16 +40,28 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should get info with error property (no name servers) for "not-registered-zxtysiahjhbao-akj.org"', function (done) {
-    dn.probe('not-registered-zxtysiahjhbao-akj.org').done(function (info) {
-      console.log(info);
+  it('should throw dn.DNSError (no name servers) for "not-registered-zxtysiahjhbao-akj.org"', function (done) {
+    dn.probe('not-registered-zxtysiahjhbao-akj.org').catch(dn.DNSError, function (err) {
+      assert.equal(err.kind, 'dns');
+      assert.equal(err.code, 'NS_NOT_FOUND');
+      assert.ok(/name servers/i.test(err.message));
       done();
     });
   });
 
-  it.only('should get full info on good domain without subdomain', function (done) {
+  it('should throw dn.DNSError (cant resolve) for "not.enoise.host"', function (done) {
+    dn.probe('not.enoise.host').catch(dn.DNSError, function (err) {
+      console.log(err);
+      //assert.equal(err.kind, 'dns');
+      //assert.equal(err.code, 'NS_NOT_FOUND');
+      //assert.ok(/name servers/i.test(err.message));
+      done();
+    });
+  });
+
+  it('should get full info on good domain without subdomain', function (done) {
     dn.probe('wrangr.com').done(function (info) {
-      console.log(info);
+      //console.log(info);
       done();
     });
   });
