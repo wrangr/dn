@@ -33,7 +33,10 @@ dn.parse = function (domain) {
       }
       resolve(parsed);
     } catch (err) {
-      return reject(err);
+      return reject(new dn.ParseError({
+        message: err.message,
+        code: 'DOMAIN_MUST_BE_STRING'
+      }));
     }
   });
 };
@@ -45,9 +48,9 @@ dn.ns = function (domain) {
     dns.resolveNs(domain, function (err, ns) {
       if (err) {
         if (err.code === dns.NODATA) {
-          reject(new dn.DNSError('NS_NO_DATA'));
+          return reject(new dn.DNSError('NS_NO_DATA'));
         } else if (err.code === dns.NOTFOUND) {
-          reject(new dn.DNSError('NS_NOT_FOUND'));
+          return reject(new dn.DNSError('NS_NOT_FOUND'));
         } else {
           return reject(err);
         }
