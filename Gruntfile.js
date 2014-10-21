@@ -37,6 +37,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-shell');
 
   grunt.registerTask('default', [ 'test' ]);
-  grunt.registerTask('test', [ 'jshint', 'shell:cover' ]);
+  grunt.registerTask('test', [ 'jshint', 'shell:test' ]);
+  grunt.registerTask('cover', [ 'jshint', 'shell:cover' ]);
 
 };
