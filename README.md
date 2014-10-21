@@ -1,5 +1,6 @@
 # dn (Domain Name)
 
+
 * Parse domain
 * Resolve DNS
 * Resolve www or non-www counterpart
@@ -8,8 +9,6 @@
 * Check HTTPS?
 * WHOIS?
 
-Errors are only thrown for things that are not the site owner's fault.
-Everything else goes in `info`.
 
 ```js
 var dn = require('dn');

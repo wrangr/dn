@@ -80,12 +80,75 @@ describe('dn.probe()', function () {
     var stub = sinon.stub();
     stub.callsArgWith(1, new MockError(dns.NODATA));
     var revert = dn.__set__('dns', _.extend({}, dns, { resolveNs: stub }));
-    dn.probe('not.enoise.host').catch(dn.DNSError, function (err) {
+    dn.probe('foo.host').catch(dn.DNSError, function (err) {
       assert.equal(err.kind, 'dns');
       assert.equal(err.code, 'NS_NO_DATA');
       assert.ok(/empty response/i.test(err.message));
       assert.equal(err.blame, 'target');
       revert();
+      done();
+    });
+  });
+
+  it('should throw dn.DNSError and blame network on dns.resolveNs timeout', function (done) {
+    var stub = sinon.stub();
+    stub.callsArgWith(1, new MockError(dns.TIMEOUT));
+    var revert = dn.__set__('dns', _.extend({}, dns, { resolveNs: stub }));
+    dn.probe('foo.host').catch(dn.DNSError, function (err) {
+      assert.equal(err.kind, 'dns');
+      assert.equal(err.code, 'NS_ETIMEOUT');
+      assert.ok(/dns error/i.test(err.message));
+      assert.equal(err.blame, 'network');
+      revert();
+      done();
+    });
+  });
+
+  it('should throw dn.DNSError and blame network on dns.resolve timeout', function (done) {
+    // Mock DNS calls.
+    var resolveNsStub = sinon.stub();
+    resolveNsStub.callsArgWith(1, null, [ 'ns2.foo.com', 'ns.foo.com' ]);
+    var resolveStub = sinon.stub();
+    resolveStub.callsArgWith(1, new MockError(dns.TIMEOUT));
+    var revert = dn.__set__('dns', _.extend({}, dns, {
+      resolveNs: resolveNsStub,
+      resolve: resolveStub
+    }));
+    dn.probe('foo.host').catch(dn.DNSError, function (err) {
+      assert.equal(err.kind, 'dns');
+      assert.equal(err.code, 'NS_ETIMEOUT');
+      assert.ok(/dns error/i.test(err.message));
+      assert.equal(err.blame, 'network');
+      revert();
+      done();
+    });
+  });
+
+  it('should handle HPE_INVALID_CONSTANT error when resolving baseurl', function (done) {
+    // Mock DNS calls.
+    var resolveNsStub = sinon.stub();
+    resolveNsStub.callsArgWith(1, null, [ 'ns2.foo.com', 'ns.foo.com' ]);
+    var resolveStub = sinon.stub();
+    resolveStub.callsArgWith(1, null, [ '1.2.3.4' ]);
+    var revertDns = dn.__set__('dns', _.extend({}, dns, {
+      resolveNs: resolveNsStub,
+      resolve: resolveStub
+    }));
+    var revertRequest = dn.__set__('request', function (opt, cb) {
+      if (opt.method === 'HEAD') {
+        return cb(new MockError('HPE_INVALID_CONSTANT'));
+      }
+      return require('request')(opt, cb);
+    });
+    // Mock HTTP requests.
+    nock('http://foo.com')
+      .get('/')
+      .reply(200);
+
+    dn.probe('foo.com').done(function (info) {
+      assert.equal(info.baseurl.href, 'http://foo.com/');
+      revertDns();
+      revertRequest();
       done();
     });
   });

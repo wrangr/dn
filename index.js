@@ -52,7 +52,7 @@ dn.ns = function (domain) {
         } else if (err.code === dns.NOTFOUND) {
           return reject(new dn.DNSError('NS_NOT_FOUND'));
         } else {
-          return reject(err);
+          return reject(new dn.DNSError(err.code, 'network'));
         }
       }
       resolve(ns);
@@ -64,7 +64,7 @@ dn.ns = function (domain) {
 dn.resolve = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
     dns.resolve(domain, function (err, addresses) {
-      if (err) { return reject(err); }
+      if (err) { return reject(new dn.DNSError(err.code, 'network')); }
       resolve(addresses);
     });
   });
@@ -122,15 +122,12 @@ dn.probe = function (domain) {
       info.parsed = parsed;
       return dn.ns(domain);
     }).then(function (ns) {
-      if (!ns || !ns.length) { return resolve(info); }
       info.ns = ns;
       return dn.resolve(domain);
     }).then(function (addresses) {
-      if (!addresses) { return resolve(info); }
       info.addresses = addresses;
       return dn.baseurl(domain);
     }).then(function (baseurl) {
-      if (!baseurl) { return resolve(info); }
       info.baseurl = baseurl;
       resolve(info);
     }).error(function (err) {
