@@ -1,3 +1,6 @@
+//
+// Deps
+//
 var assert = require('assert');
 var util = require('util');
 var dns = require('dns');
@@ -7,6 +10,7 @@ var nock = require('nock');
 var _ = require('lodash');
 
 
+// `MockError` extends `Error` to allow for cleaner tests below.
 function MockError(code) {
   Error.call(this);
   this.message = '';
@@ -14,24 +18,30 @@ function MockError(code) {
 }
 util.inherits(MockError, Error);
 
+
+// Load the `dn` module using `rewire` instead of `require` so we can inject
+// mock dependencies.
 var dn = rewire('../');
+
+
+//
+// Tests
+//
 
 describe('dn.probe()', function () {
 
-  this.timeout(60 * 1000);
-
-  it('should throw dn.ParseError if arg is not a string', function (done) {
+  it('should throw dn.ParseError and blame caller if arg is not a string', function (done) {
     dn.probe().catch(dn.ParseError, function (err) {
       assert.ok(err instanceof dn.ParseError);
       assert.ok(/string/i.test(err.message));
-      assert.equal(err.code, 'DOMAIN_MUST_BE_STRING');
+      assert.equal(err.code, 'PARSE_ENOTSTRING');
       assert.equal(err.kind, 'parse');
       assert.equal(err.blame, 'caller');
       done();
     });
   });
 
-  it('should throw dn.ParseError for ""', function (done) {
+  it('should throw dn.ParseError and blame caller for ""', function (done) {
     dn.probe('').catch(dn.ParseError, function (err) {
       assert.ok(err instanceof dn.ParseError);
       assert.ok(/too short/i.test(err.message));
@@ -42,7 +52,7 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should throw dn.ParseError for "aaa bbb"', function (done) {
+  it('should throw dn.ParseError and blame caller for "aaa bbb"', function (done) {
     dn.probe('aaa bbb').catch(dn.ParseError, function (err) {
       assert.equal(err.kind, 'parse');
       assert.equal(err.code, 'LABEL_INVALID_CHARS');
@@ -52,23 +62,23 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should throw dn.ParseError for "x.local"', function (done) {
+  it('should throw dn.ParseError and blame caller for "x.local"', function (done) {
     dn.probe('x.yz').catch(dn.ParseError, function (err) {
       assert.equal(err.kind, 'parse');
-      assert.equal(err.code, 'DOMAIN_NOT_LISTED');
+      assert.equal(err.code, 'PARSE_ENOTLISTED');
       assert.ok(/public suffix/i.test(err.message));
       assert.equal(err.blame, 'caller');
       done();
     });
   });
 
-  it('should throw dn.DNSError when name servers not found', function (done) {
+  it('should throw dn.DNSError and blame target when name servers not found', function (done) {
     var stub = sinon.stub();
     stub.callsArgWith(1, new MockError(dns.NOTFOUND));
     var revert = dn.__set__('dns', _.extend({}, dns, { resolveNs: stub }));
     dn.probe('foo.org').catch(dn.DNSError, function (err) {
       assert.equal(err.kind, 'dns');
-      assert.equal(err.code, 'NS_NOT_FOUND');
+      assert.equal(err.code, 'DNS_NS_ENOTFOUND');
       assert.ok(/name servers/i.test(err.message));
       assert.equal(err.blame, 'target');
       revert();
@@ -76,13 +86,13 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should throw dn.DNSError when we get empty reply when resolving getting name servers', function (done) {
+  it('should throw dn.DNSError and blame target when we get empty reply when resolving getting name servers', function (done) {
     var stub = sinon.stub();
     stub.callsArgWith(1, new MockError(dns.NODATA));
     var revert = dn.__set__('dns', _.extend({}, dns, { resolveNs: stub }));
     dn.probe('foo.host').catch(dn.DNSError, function (err) {
       assert.equal(err.kind, 'dns');
-      assert.equal(err.code, 'NS_NO_DATA');
+      assert.equal(err.code, 'DNS_NS_ENODATA');
       assert.ok(/empty response/i.test(err.message));
       assert.equal(err.blame, 'target');
       revert();
@@ -96,7 +106,7 @@ describe('dn.probe()', function () {
     var revert = dn.__set__('dns', _.extend({}, dns, { resolveNs: stub }));
     dn.probe('foo.host').catch(dn.DNSError, function (err) {
       assert.equal(err.kind, 'dns');
-      assert.equal(err.code, 'NS_ETIMEOUT');
+      assert.equal(err.code, 'DNS_NS_ETIMEOUT');
       assert.ok(/dns error/i.test(err.message));
       assert.equal(err.blame, 'network');
       revert();
@@ -116,8 +126,52 @@ describe('dn.probe()', function () {
     }));
     dn.probe('foo.host').catch(dn.DNSError, function (err) {
       assert.equal(err.kind, 'dns');
-      assert.equal(err.code, 'NS_ETIMEOUT');
+      assert.equal(err.code, 'DNS_A_ETIMEOUT');
       assert.ok(/dns error/i.test(err.message));
+      assert.equal(err.blame, 'network');
+      revert();
+      done();
+    });
+  });
+
+  it('should throw dn.RequestError and blame target when ECONNRESET request error', function (done) {
+    var revert = dn.__set__('request', function (opt, cb) {
+      cb(new MockError('ECONNRESET'));
+    });
+
+    dn.baseurl('foo.com').catch(function (err) {
+      assert.equal(err.kind, 'request');
+      assert.equal(err.code, 'REQUEST_ECONNRESET');
+      assert.ok(/hang up/i.test(err.message));
+      assert.equal(err.blame, 'target');
+      revert();
+      done();
+    });
+  });
+
+  it('should throw dn.RequestError and blame target when ECONNREFUSED request error', function (done) {
+    var revert = dn.__set__('request', function (opt, cb) {
+      cb(new MockError('ECONNREFUSED'));
+    });
+
+    dn.baseurl('foo.com').catch(function (err) {
+      assert.equal(err.kind, 'request');
+      assert.equal(err.code, 'REQUEST_ECONNREFUSED');
+      assert.ok(/refused/i.test(err.message));
+      assert.equal(err.blame, 'target');
+      revert();
+      done();
+    });
+  });
+
+  it('should throw dn.RequestError and blame network when EPIPE', function (done) {
+    var revert = dn.__set__('request', function (opt, cb) {
+      cb(new MockError('EPIPE'));
+    });
+
+    dn.baseurl('foo.net').catch(function (err) {
+      assert.equal(err.kind, 'request');
+      assert.equal(err.code, 'REQUEST_EPIPE');
       assert.equal(err.blame, 'network');
       revert();
       done();
@@ -153,7 +207,12 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should get full info on good domain without subdomain', function (done) {
+  it('should handle 40x and 50x');
+  it('should handle viabcp');
+  it('should handle google.com');
+  it('should warn sites with non-redirecting www and non-www');
+
+  it('should follow redirect to HTTPS', function (done) {
     // Mock DNS calls.
     var resolveNsStub = sinon.stub();
     resolveNsStub.callsArgWith(1, null, [ 'ns2.mainnameserver.com', 'ns.mainnameserver.com' ]);
@@ -178,7 +237,7 @@ describe('dn.probe()', function () {
     });
   });
 
-  it('should get full info on good domain with subdomain', function (done) {
+  it('should follow redirect to www subdomain', function (done) {
     // Mock DNS calls.
     var resolveNsStub = sinon.stub();
     resolveNsStub.callsArgWith(1, null, [ 'uma.ns.cloudfare.com', 'ed.ns.cloudfare.com' ]);

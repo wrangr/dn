@@ -26,16 +26,13 @@ dn.parse = function (domain) {
         return reject(new dn.ParseError(parsed.error));
       }
       if (!parsed.listed) {
-        return reject(new dn.ParseError({
-          message: dn.DOMAIN_NOT_LISTED,
-          code: 'DOMAIN_NOT_LISTED',
-        }));
+        return reject(new dn.ParseError('PARSE_ENOTLISTED'));
       }
       resolve(parsed);
     } catch (err) {
       return reject(new dn.ParseError({
         message: err.message,
-        code: 'DOMAIN_MUST_BE_STRING'
+        code: 'PARSE_ENOTSTRING'
       }));
     }
   });
@@ -48,11 +45,11 @@ dn.ns = function (domain) {
     dns.resolveNs(domain, function (err, ns) {
       if (err) {
         if (err.code === dns.NODATA) {
-          return reject(new dn.DNSError('NS_NO_DATA'));
+          return reject(new dn.DNSError('DNS_NS_ENODATA'));
         } else if (err.code === dns.NOTFOUND) {
-          return reject(new dn.DNSError('NS_NOT_FOUND'));
+          return reject(new dn.DNSError('DNS_NS_ENOTFOUND'));
         } else {
-          return reject(new dn.DNSError(err.code, 'network'));
+          return reject(new dn.DNSError('DNS_NS_' + err.code, 'network'));
         }
       }
       resolve(ns);
@@ -64,7 +61,7 @@ dn.ns = function (domain) {
 dn.resolve = function (domain) {
   return new BluebirdPromise(function (resolve, reject) {
     dns.resolve(domain, function (err, addresses) {
-      if (err) { return reject(new dn.DNSError(err.code, 'network')); }
+      if (err) { return reject(new dn.DNSError('DNS_A_' + err.code, 'network')); }
       resolve(addresses);
     });
   });
@@ -100,11 +97,11 @@ dn.baseurl = function (domain) {
         // https://github.com/joyent/node/issues/4863
         reqOpt.method = 'GET';
         request(reqOpt, function (err, res) {
-          if (err) { return reject(err); }
+          if (err) { return reject(new dn.RequestError(err)); }
           handleBaseurl(res.request.href);
         });
       } else if (err) {
-        reject(err);
+        reject(new dn.RequestError(err));
       } else {
         handleBaseurl(res.request.href);
       }
