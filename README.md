@@ -1,5 +1,6 @@
 # dn (Domain Name)
 
+[![Build Status](https://magnum.travis-ci.com/wrangr/dn.svg?token=4uyuoxi9qhvAfjzUTB6y&branch=master)](https://magnum.travis-ci.com/wrangr/dn)
 
 * Parse domain
 * Resolve DNS
