@@ -8,6 +8,7 @@ var dns = require('native-dns');
 var request = require('request');
 var async = require('async');
 var psl = require('psl');
+var _ = require('lodash');
 
 
 //
@@ -22,8 +23,8 @@ var dn = module.exports = {};
 //
 
 // Copy error codes from `psl`
-Object.keys(psl.errorCodes).forEach(function (k) {
-  dn['PARSE_' + k] = psl.errorCodes[k];
+_.each(psl.errorCodes, function (v, k) {
+  dn['PARSE_' + k] = v;
 });
 
 dn.DNS_NS_ENOTFOUND = 'No name servers found for domain';
@@ -37,7 +38,7 @@ dn.REQUEST_ECONNREFUSED = 'Connection refused by server';
 dn.ParseError = function ParseError(obj) {
   Error.call(this);
   Error.captureStackTrace(this, arguments.callee);
-  if (typeof obj === 'string') {
+  if (_.isString(obj)) {
     this.code = obj;
     this.message = dn[obj];
   } else {
@@ -86,61 +87,60 @@ dn.RequestError = function RequestError(err) {
 util.inherits(dn.RequestError, Error);
 
 
+function parseRecords(records) {
+  return records.map(function (record) {
+    record.type = dns.consts.QTYPE_TO_NAME[record.type];
+    return _.omit(record, [ 'class' ]);
+  });
+}
+
+dn.resolve = function (domain, type, server, cb) {
+  var q = dns.Question({ name: domain, type: type });
+  var req = dns.Request({ question: q, server: server });
+  req.on('timeout', function () {});
+  req.on('message', function (err, msg) {
+    cb(null, {
+      answer: parseRecords(msg.answer),
+      authority: parseRecords(msg.authority),
+      additional: parseRecords(msg.additional)
+    });
+  });
+  req.send();
+};
+
+dn.soa = function (domain, cb) {
+  function resolvePrimary(answer) {
+    async.map(answer, function (record, cb) {
+      dns.resolve(record.primary, function (err, addresses) {
+        record.addresses = addresses;
+        cb(null, record);
+      });
+    }, cb);
+  }
+
+  dn.resolve(domain, 'SOA', '208.67.222.222', function (err, data) {
+    if (err) { return cb(err); }
+    if (data.answer.length) {
+      resolvePrimary(data.answer);
+    } else if (data.authority.length) {
+      var soa = data.authority.reduce(function (memo, record) {
+        if (record.type === 'SOA') { return record; }
+        return memo;
+      }, undefined);
+      resolvePrimary([ soa ], cb);
+    } else {
+      console.error(data);
+    }
+  });
+};
+
 //
 // Dig up DNS records for domain.
 //
 dn.dig = function (domain, cb) {
-  // This will be invoked on the given name server ip address responsible for
-  // this domain.
-  function query(server) {
-    var q = dns.Question({ name: domain, type: 'ANY' });
-    var req = dns.Request({ question: q, server: server });
-    var records = [];
-
-    req.on('timeout', function () {
-      console.log('Timeout in making request');
-    });
-
-    req.on('message', function (err, msg) {
-      //console.log(msg);
-      msg.answer.forEach(function (a) {
-        var type = dns.consts.QTYPE_TO_NAME[a.type];
-        a.type = type;
-        delete a.class;
-        records.push(a);
-      });
-    });
-
-    req.on('end', function () {
-      cb(null, records);
-    });
-
-    req.send();
-  }
-
-  // First we get the name servers for the domain as we want to query this for
-  // the rest of the records.
-  dns.resolveNs(domain, function (err, nameServers) {
-    if (err) {
-      if (err.code === dns.NODATA) {
-        return cb(new dn.DNSError('DNS_NS_ENODATA'));
-      } else if (err.code === dns.NOTFOUND) {
-        return cb(new dn.DNSError('DNS_NS_ENOTFOUND'));
-      } else {
-        return cb(new dn.DNSError('DNS_NS_' + err.code, 'network'));
-      }
-    }
-
-    var nameServer = nameServers[0];
-    if (!net.isIP(nameServer)) {
-      dns.resolve4(nameServer, function (err, nameServerAddresses) {
-        if (err) {
-          console.error(err);
-          return;
-        }
-        query(nameServerAddresses[0]);
-      });
-    }
+  dn.soa(domain, function (err, soa) {
+    if (err) { return cb(err); }
+    dn.resolve(domain, 'ANY', soa[0].addresses[0], cb);
   });
 };
 

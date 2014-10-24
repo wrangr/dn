@@ -8,22 +8,27 @@ var dn = require('../');
 var argv = minimist(process.argv.slice(2));
 var cmd = argv._.shift();
 var domain = argv._.shift();
-var inspectOpt = { colors: argv.colors !== false, depth: null };
+
+// Default command.
+if (!domain) {
+  domain = cmd;
+  cmd = 'probe';
+}
 
 if (argv.v || argv.version) {
   console.log(pkg.version);
   process.exit(0);
 } else if (!cmd || !domain || argv.h || argv.help) {
   console.log([
-    'Usage: ' + pkg.name + ' <command> [ options ] <domain-name>',
+    'Usage: ' + pkg.name + ' [ options ] [ <command> ] <domain-name>',
     '',
     'Commands:',
     '',
+    'probe            Run diagnosis/report on domain. This is the default command.',
     'parse            Parse domain name.',
     'dig              Dig up DNS records for domain.',
     'whois            Query public WHOIS database for domain.',
     'baseurl          Figure out baseurl.',
-    'probe            Run diagnosis/report on domain.',
     '',
     'Options:',
     '',
@@ -44,7 +49,7 @@ function inspect(obj) {
   } else if (argv.jsonpretty) {
     return JSON.stringify(obj, null, 2);
   }
-  return util.inspect(obj, inspectOpt);
+  return util.inspect(obj, { colors: argv.colors !== false, depth: null });
 }
 
 function error(err) {
