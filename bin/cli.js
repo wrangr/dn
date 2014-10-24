@@ -16,11 +16,6 @@ if (!input || argv.h || argv.help) {
   process.exit(0);
 }
 
-
-if (!input) {
-  return onError(new Error('Input is required!'));
-}
-
 dn.probe(input, function (err, info) {
   if (err) {
     console.error(util.inspect(err, { colors: true, depth: null }));
