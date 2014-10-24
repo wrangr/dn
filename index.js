@@ -86,14 +86,8 @@ dn.RequestError = function RequestError(err) {
 util.inherits(dn.RequestError, Error);
 
 
-var types = [ 'A', 'AAAA', 'MX', 'TXT', 'SRV', /*'PTR',*/ 'NS', 'CNAME' ];
-
-
 //
 // Dig up DNS records for domain.
-//
-// @param `domain` String|Object Can be a string (ie: foo.com) or an object
-// returned by `dn.parse()`.
 //
 dn.dig = function (domain, cb) {
   // This will be invoked on the given name server ip address responsible for
