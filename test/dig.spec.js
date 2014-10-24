@@ -1,9 +1,9 @@
 var dn = require('../');
 
-describe('dn.resolve()', function () {
+describe('dn.dig()', function () {
 
   it('should...', function (done) {
-    dn.resolve('wrangr.com', function (err, data) {
+    dn.dig('wrangr.com', function (err, data) {
       //console.log(err, data);
       done();
     });
