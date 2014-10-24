@@ -16,10 +16,10 @@ module.exports = function (grunt) {
 
     shell: {
       test: {
-        command: './node_modules/.bin/mocha test/test-*.js'
+        command: './node_modules/.bin/mocha test/*.spec.js'
       },
       cover: {
-        command: './node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha test/test-*.js'
+        command: './node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha test/*.spec.js'
       }
     },
 
