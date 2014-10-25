@@ -2,45 +2,48 @@
 
 [![Build Status](https://magnum.travis-ci.com/wrangr/dn.svg?token=4uyuoxi9qhvAfjzUTB6y&branch=master)](https://magnum.travis-ci.com/wrangr/dn)
 
-* Parse domain
-* Resolve DNS
-* Resolve www or non-www counterpart
-* Figure out baseurl
-* Check if www or non-www counterpart redirects
-* Check HTTPS?
-* WHOIS?
-
-
 ## API
 
-### `dn.dig( domain, callback )`
+### `dn.parse( domain )`
 
 ```js
-var dn = require('dn');
-
-dn.dig('foo.com', function (err, data) {});
+var parsed = dn.parse('mydomain.co.uk');
 ```
 
+### `dn.dig( domain, rtype, [server,] callback )`
+
+```js
+dn.dig('foo.com', 'ANY', '1.2.3.4', function (err, data) {
+  //...
+});
+```
+
+### `dn.soa( domain, callback )`
+
+```js
+dn.soa('www.example.com', function (err, data) {
+  //...
+});
+```
 ### `dn.whois( domain, callback )`
 
 ```js
-dn.whois('foo.com', function (err, data) {});
+dn.whois('foo.com', function (err, data) {
+  //...
+});
 ```
 
 ### `dn.baseurl( domain, callback )`
 
 ```js
-dn.baseurl('foo.com', function (err, data) {});
+dn.baseurl('foo.com', function (err, data) {
+  //...
+});
 ```
 
 ### `dn.probe( domain, callback )`
 
 ```js
-// `dn.probe()` will throw if first argument is not a string.
-dn.probe(null, function (err) {
-  //...
-});
-
 // We get a an error in the callback if domain can not be parsed.
 dn.probe('aaa bbb', function (err) {
   // {
@@ -67,6 +70,7 @@ Commands:
 probe            Run diagnosis/report on domain. This is the default command.
 parse            Parse domain name.
 dig              Dig up DNS records for domain.
+soa              Get Authority name server for domain.
 whois            Query public WHOIS database for domain.
 baseurl          Figure out baseurl.
 

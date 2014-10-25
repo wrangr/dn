@@ -27,6 +27,7 @@ if (argv.v || argv.version) {
     'probe            Run diagnosis/report on domain. This is the default command.',
     'parse            Parse domain name.',
     'dig              Dig up DNS records for domain.',
+    'soa              Get Authority name server for domain.',
     'whois            Query public WHOIS database for domain.',
     'baseurl          Figure out baseurl.',
     '',
