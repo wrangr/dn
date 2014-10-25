@@ -168,7 +168,13 @@ dn.baseurl = function (domain, cb) {
       cb(null, ret);
     }
 
-    var reqOpt = { method: 'HEAD', url: uri, followRedirect: false };
+    var reqOpt = {
+      method: 'HEAD',
+      url: uri,
+      followRedirect: false,
+      timeout: 30 * 1000
+    };
+
     request(reqOpt, function (err, res) {
       if (err && err.code === 'HPE_INVALID_CONSTANT') {
         // In some weird cases we get http parse errors when using the `HEAD`
@@ -248,8 +254,6 @@ dn.probe = function (domain, cb) {
     });
     return;
   }
-
-  info.parsed = parsed;
 
   async.auto({
     dns: async.apply(dn.dns, domain),
