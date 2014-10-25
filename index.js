@@ -153,42 +153,52 @@ dn.dns = function (domain, cb) {
 // Figure out base url.
 //
 dn.baseurl = function (domain, cb) {
-  var urlObj = {
-    protocol: 'http:',
-    hostname: domain
-  };
+  // HTTP HEAD to "resolve" URL...
+  function head(uri, cb) {
+    function handleResponse(err, res) {
+      if (err) {
+        return cb(null, err);
+      }
+      var ret = _.pick(res, [ 'statusCode', 'headers' ]);
+      //var href = res.request.href;
+      //var hrefObj = url.parse(href);
+      //var uriObj = url.parse(uri);
+      //ret.isExternalRedirect = (hrefObj.hostname !== uriObj.hostname);
+      //ret.forceSSL = (hrefObj.protocol !== uriObj.protocol);
+      cb(null, ret);
+    }
 
-  var reqOpt = {
-    url: url.format(urlObj),
-    method: 'HEAD'
-  };
-
-  function handleBaseurl(href) {
-    var ret = { href: href };
-    var hrefObj = url.parse(href);
-    ret.isExternalRedirect = (hrefObj.hostname !== urlObj.hostname);
-    ret.forceSSL = (hrefObj.protocol !== urlObj.protocol);
-    cb(null, ret);
+    var reqOpt = { method: 'HEAD', url: uri, followRedirect: false };
+    request(reqOpt, function (err, res) {
+      if (err && err.code === 'HPE_INVALID_CONSTANT') {
+        // In some weird cases we get http parse errors when using the `HEAD`
+        // method, so when that happens try a GET request.
+        // See:
+        // https://github.com/mikeal/request/issues/350
+        // https://github.com/joyent/node/issues/4863
+        reqOpt.method = 'GET';
+        request.get(reqOpt, function (err, res) {
+          //if (err) { return cb(new dn.RequestError(err)); }
+          handleResponse(err, res);
+        });
+      //} else if (err) {
+      //  cb(new dn.RequestError(err));
+      } else {
+        handleResponse(err, res);
+      }
+    });
   }
 
-  request(reqOpt, function (err, res) {
-    if (err && err.code === 'HPE_INVALID_CONSTANT') {
-      // In some weird cases we get http parse errors when using the `HEAD`
-      // method, so when that happens try a GET request.
-      // See:
-      // https://github.com/mikeal/request/issues/350
-      // https://github.com/joyent/node/issues/4863
-      reqOpt.method = 'GET';
-      request(reqOpt, function (err, res) {
-        if (err) { return cb(new dn.RequestError(err)); }
-        handleBaseurl(res.request.href);
-      });
-    } else if (err) {
-      cb(new dn.RequestError(err));
-    } else {
-      handleBaseurl(res.request.href);
-    }
-  });
+  var isWww = /^www\./.test(domain);
+  var www = isWww ? domain : 'www.' + domain;
+  var naked = isWww ? domain.slice(4) : domain;
+
+  async.parallel({
+    'https-naked': async.apply(head, 'https://' + naked),
+    'https-www': async.apply(head, 'https://' + www),
+    'http-naked': async.apply(head, 'http://' + naked),
+    'http-www': async.apply(head, 'http://' + www)
+  }, cb);
 };
 
 
@@ -198,37 +208,27 @@ dn.baseurl = function (domain, cb) {
 dn.whois = function (domain, cb) {
   var tld = domain.substring(domain.lastIndexOf('.') + 1);
   var cname = tld + '.whois-servers.net';
-  var hasInvokedCb = false;
 
   function invokeCb(err, data) {
-    if (hasInvokedCb) { return; }
-    hasInvokedCb = true;
     cb(err, data);
+    cb = function () {}; // Prevent calling more than once.
   }
 
   dns.resolveCname(cname, function (err, addresses) {
-    if (err) {
-      return invokeCb(err);
-    }
+    if (err) { return invokeCb(err); }
 
     var responseText = '';
-    var socket = net.connect(43, addresses[0], onConnect);
+    var socket = net.connect(43, addresses[0], function () {
+      socket.end(domain + '\r\n', 'ascii');
+    });
     socket.setEncoding('ascii');
     socket.on('error', invokeCb);
-    socket.on('data', onData);
-    socket.on('close', onClose);
-
-    function onConnect() {
-      socket.end(domain + '\r\n', 'ascii');
-    }
-
-    function onData(chunk) {
+    socket.on('data', function onData(chunk) {
       responseText += chunk;
-    }
-
-    function onClose() {
+    });
+    socket.on('close', function onClose() {
       invokeCb(null, responseText);
-    }
+    });
   });
 };
 
