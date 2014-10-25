@@ -94,7 +94,11 @@ function parseRecords(records) {
   });
 }
 
-dn.resolve = function (domain, type, server, cb) {
+dn.dig = function (domain/*, type, server, cb*/) {
+  var args = _.toArray(arguments).slice(1);
+  var type = args.shift();
+  var cb = args.pop();
+  var server = args.pop() || '208.67.222.222';
   var q = dns.Question({ name: domain, type: type });
   var req = dns.Request({ question: q, server: server });
   req.on('timeout', function () {});
@@ -118,7 +122,7 @@ dn.soa = function (domain, cb) {
     }, cb);
   }
 
-  dn.resolve(domain, 'SOA', '208.67.222.222', function (err, data) {
+  dn.dig(domain, 'SOA', '208.67.222.222', function (err, data) {
     if (err) { return cb(err); }
     if (data.answer.length) {
       resolvePrimary(data.answer);
@@ -137,10 +141,10 @@ dn.soa = function (domain, cb) {
 //
 // Dig up DNS records for domain.
 //
-dn.dig = function (domain, cb) {
+dn.dns = function (domain, cb) {
   dn.soa(domain, function (err, soa) {
     if (err) { return cb(err); }
-    dn.resolve(domain, 'ANY', soa[0].addresses[0], cb);
+    dn.dig(domain, 'ANY', soa[0].addresses[0], cb);
   });
 };
 
@@ -247,10 +251,10 @@ dn.probe = function (domain, cb) {
 
   info.parsed = parsed;
 
-  async.series({
-    dns: async.apply(dn.dig, domain),
-    whois: async.apply(dn.whois, domain),
-    baseurl: async.apply(dn.baseurl, domain)
+  async.auto({
+    dns: async.apply(dn.dns, domain),
+    whois: async.apply(dn.whois, parsed.domain),
+    baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
   }, function (err, results) {
     if (err) { return cb(err); }
     Object.keys(results).forEach(function (k) {

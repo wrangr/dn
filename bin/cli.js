@@ -70,11 +70,11 @@ if (typeof dn[cmd] !== 'function') {
   error(new Error('Unknown command.'));
 }
 
-dn[cmd](domain, function (err, data) {
+dn[cmd].apply(dn, [ domain ].concat(argv._).concat(function (err, data) {
   if (err) {
     error(err);
   } else {
     done(data);
   }
-});
+}));
 
