@@ -27,6 +27,7 @@ _.each(psl.errorCodes, function (v, k) {
   dn['PARSE_' + k] = v;
 });
 
+dn.PARSE_ENOTLISTED = 'Domain name doesnt belong to a known public suffix';
 dn.DNS_NS_ENOTFOUND = 'No name servers found for domain';
 dn.DNS_NS_ENODATA = 'Empty response from server';
 dn.REQUEST_ECONNRESET = 'Socket hang up';
@@ -101,8 +102,10 @@ dn.dig = function (domain/*, type, server, cb*/) {
   var server = args.pop() || '208.67.222.222';
   var q = dns.Question({ name: domain, type: type });
   var req = dns.Request({ question: q, server: server });
+  // TODO: HANDLE ERRORS!!!
   req.on('timeout', function () {});
   req.on('message', function (err, msg) {
+    //console.log(err, msg);
     cb(null, {
       answer: parseRecords(msg.answer),
       authority: parseRecords(msg.authority),
@@ -133,7 +136,7 @@ dn.soa = function (domain, cb) {
       }, undefined);
       resolvePrimary([ soa ], cb);
     } else {
-      console.error(data);
+      //console.error(data);
     }
   });
 };
@@ -216,7 +219,7 @@ dn.whois = function (domain, cb) {
   var cname = tld + '.whois-servers.net';
 
   function invokeCb(err, data) {
-    cb(err, data);
+    cb(null, err || data);
     cb = function () {}; // Prevent calling more than once.
   }
 
@@ -255,10 +258,17 @@ dn.probe = function (domain, cb) {
     return;
   }
 
+  if (!parsed.listed) {
+    process.nextTick(function () {
+      cb(new dn.ParseError('PARSE_ENOTLISTED'));
+    });
+  }
+
   async.auto({
-    dns: async.apply(dn.dns, domain),
-    whois: async.apply(dn.whois, parsed.domain),
-    baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
+    soa: async.apply(dn.soa, domain),
+    //dns: async.apply(dn.dns, domain),
+    //whois: async.apply(dn.whois, parsed.domain),
+    //baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
   }, function (err, results) {
     if (err) { return cb(err); }
     Object.keys(results).forEach(function (k) {

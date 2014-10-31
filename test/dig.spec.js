@@ -1,8 +1,8 @@
 var dn = require('../');
 
-describe('dn.dig()', function () {
+describe.skip('dn.dig()', function () {
 
-  it.only('should...', function (done) {
+  it('should...', function (done) {
     dn.dig('github.com', 'ANY',  function (err, data) {
       console.log(err, data);
       done();
