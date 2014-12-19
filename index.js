@@ -95,6 +95,10 @@ function parseRecords(records) {
   });
 }
 
+
+//
+// Dig up DNS records.
+//
 dn.dig = function (domain/*, type, server, cb*/) {
   var args = _.toArray(arguments).slice(1);
   var cb = args.pop();
@@ -115,6 +119,10 @@ dn.dig = function (domain/*, type, server, cb*/) {
   req.send();
 };
 
+
+//
+// Get authority name server for domain name.
+//
 dn.soa = function (domain, cb) {
   function resolvePrimary(answer) {
     async.map(answer, function (record, cb) {
@@ -140,6 +148,7 @@ dn.soa = function (domain, cb) {
     }
   });
 };
+
 
 //
 // Dig up DNS records for domain.
@@ -220,8 +229,8 @@ dn.whois = function (domain, cb) {
 
 
 //
-// Probe a domain name, this will parse, check dns, whois and baseurl and
-// produce a report.
+// Probe a domain name, this will parse, check dns, baseurl and
+// check agains our good practice and common problems checklist.
 //
 dn.probe = function (domain, cb) {
 
