@@ -4,36 +4,9 @@
 
 ## API
 
-### `dn.parse( domain )`
-
-```js
-var parsed = dn.parse('mydomain.co.uk');
-```
-
-### `dn.dig( domain, rtype, [server,] callback )`
-
-```js
-dn.dig('foo.com', 'ANY', '1.2.3.4', function (err, data) {
-  //...
-});
-```
-
-### `dn.soa( domain, callback )`
-
-```js
-dn.soa('www.example.com', function (err, data) {
-  //...
-});
-```
-### `dn.whois( domain, callback )`
-
-```js
-dn.whois('foo.com', function (err, data) {
-  //...
-});
-```
-
 ### `dn.baseurl( domain, callback )`
+
+Send HTTP and HTTPS GET requests to domain both using `www` and without it so we can figure out what's the site's base URL.
 
 ```js
 dn.baseurl('foo.com', function (err, data) {
@@ -41,20 +14,60 @@ dn.baseurl('foo.com', function (err, data) {
 });
 ```
 
-### `dn.probe( domain, callback )`
+### `dn.dig( domain, rtype, [server,] callback )`
+
+Dig up DNS records.
 
 ```js
-// We get a an error in the callback if domain can not be parsed.
-dn.probe('aaa bbb', function (err) {
-  // {
-  //   message: 'Domain name label can only contain...',
-  //   code: 'LABEL_INVALID_CHARS',
-  //   kind: 'parse'
-  // }
-  //
+dn.dig('foo.com', 'MX', '1.2.3.4', function (err, data) {
+  //...
 });
+```
 
+### `dn.dns( domain, rtype, [server,] callback )`
+
+Dig up "any" DNS records using authority server.
+
+```js
+dn.dns('foo.com', function (err, data) {
+  //...
+});
+```
+
+### `dn.parse( domain )`
+
+Parse domain using `psl`.
+
+```js
+var parsed = dn.parse('mydomain.co.uk');
+```
+
+### `dn.probe( domain, callback )`
+
+Diagnose domain. This will run `dn.parse()` then `dn.dns()` and finally `dn.baseurl()`.
+
+```js
 dn.probe('foo.bar.com', function (err, info) {
+  //...
+});
+```
+
+### `dn.soa( domain, callback )`
+
+Get authority name server for domain name.
+
+```js
+dn.soa('www.example.com', function (err, data) {
+  //...
+});
+```
+
+### `dn.whois( domain, callback )`
+
+Query public WHOIS data for domain.
+
+```js
+dn.whois('foo.com', function (err, data) {
   //...
 });
 ```
@@ -67,12 +80,13 @@ Usage: dn [ options ] [ <command> ] <domain-name>
 
 Commands:
 
-probe            Run diagnosis/report on domain. This is the default command.
-parse            Parse domain name.
-dig              Dig up DNS records for domain.
+baseurl          Figure out baseurl.
+dig              Dig up DNS records. ie: "dn dig foo.com MX"
+dns              Dig up "any" DNS records from authority.
+parse            Parse domain name using "psl".
+probe            Diagnose domain (parse -> dns -> baseurl).
 soa              Get Authority name server for domain.
 whois            Query public WHOIS database for domain.
-baseurl          Figure out baseurl.
 
 Options:
 

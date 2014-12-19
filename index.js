@@ -242,10 +242,8 @@ dn.probe = function (domain, cb) {
   }
 
   async.auto({
-    soa: async.apply(dn.soa, domain),
-    //dns: async.apply(dn.dns, domain),
-    //whois: async.apply(dn.whois, parsed.domain),
-    //baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
+    dns: async.apply(dn.dns, domain),
+    baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
   }, function (err, results) {
     if (err) { return cb(err); }
     Object.keys(results).forEach(function (k) {
