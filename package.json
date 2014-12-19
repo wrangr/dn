@@ -1,10 +1,10 @@
 {
   "name": "dn",
   "version": "0.0.0",
-  "description": "Domain name inspector",
+  "description": "Domain name tools",
   "repository": {
     "type": "git",
-    "url": "git@github.com:wrangr/d.git"
+    "url": "git@github.com:wrangr/dn.git"
   },
   "main": "index.js",
   "bin": {

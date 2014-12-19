@@ -2,6 +2,15 @@
 
 [![Build Status](https://magnum.travis-ci.com/wrangr/dn.svg?token=4uyuoxi9qhvAfjzUTB6y&branch=master)](https://magnum.travis-ci.com/wrangr/dn)
 
+## Installation
+
+```sh
+git clone https://github.com/wrangr/dn.git
+cd ./dn
+npm install
+npm link
+```
+
 ## API
 
 ### `dn.baseurl( domain, callback )`
@@ -24,7 +33,7 @@ dn.dig('foo.com', 'MX', '1.2.3.4', function (err, data) {
 });
 ```
 
-### `dn.dns( domain, rtype, [server,] callback )`
+### `dn.dns( domain, callback )`
 
 Dig up "any" DNS records using authority server.
 
