@@ -24,12 +24,13 @@ if (argv.v || argv.version) {
     '',
     'Commands:',
     '',
-    'probe            Run diagnosis/report on domain. This is the default command.',
-    'parse            Parse domain name.',
-    'dig              Dig up DNS records for domain.',
+    'baseurl          Figure out baseurl.',
+    'dig              Dig up DNS records. ie: "' + pkg.name + ' dig foo.com MX"',
+    'dns              Dig up "any" DNS records from authority.',
+    'parse            Parse domain name using "psl".',
+    'probe            Diagnose domain (parse -> dns -> baseurl).',
     'soa              Get Authority name server for domain.',
     'whois            Query public WHOIS database for domain.',
-    'baseurl          Figure out baseurl.',
     '',
     'Options:',
     '',
@@ -49,6 +50,8 @@ function inspect(obj) {
     return JSON.stringify(obj);
   } else if (argv.jsonpretty) {
     return JSON.stringify(obj, null, 2);
+  } else if (typeof obj === 'string') {
+    return obj;
   }
   return util.inspect(obj, { colors: argv.colors !== false, depth: null });
 }

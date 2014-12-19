@@ -97,9 +97,9 @@ function parseRecords(records) {
 
 dn.dig = function (domain/*, type, server, cb*/) {
   var args = _.toArray(arguments).slice(1);
-  var type = args.shift();
   var cb = args.pop();
-  var server = args.pop() || '208.67.222.222';
+  var type = args.shift() || 'ANY';
+  var server = args.shift() || '208.67.222.222';
   var q = dns.Question({ name: domain, type: type });
   var req = dns.Request({ question: q, server: server });
   // TODO: HANDLE ERRORS!!!
@@ -156,45 +156,22 @@ dn.dns = function (domain, cb) {
 // Figure out base url.
 //
 dn.baseurl = function (domain, cb) {
-  // HTTP HEAD to "resolve" URL...
-  function head(uri, cb) {
-    function handleResponse(err, res) {
-      if (err) {
-        return cb(null, err);
-      }
-      var ret = _.pick(res, [ 'statusCode', 'headers' ]);
-      //var href = res.request.href;
-      //var hrefObj = url.parse(href);
-      //var uriObj = url.parse(uri);
-      //ret.isExternalRedirect = (hrefObj.hostname !== uriObj.hostname);
-      //ret.forceSSL = (hrefObj.protocol !== uriObj.protocol);
-      cb(null, ret);
-    }
-
+  function get(uri, cb) {
     var reqOpt = {
-      method: 'HEAD',
+      // Use GET as not all servers implement HEAD
+      method: 'GET',
       url: uri,
       followRedirect: false,
-      timeout: 30 * 1000
+      gzip: true,
+      timeout: 30 * 1000,
+      strictSSL: true
     };
 
     request(reqOpt, function (err, res) {
-      if (err && err.code === 'HPE_INVALID_CONSTANT') {
-        // In some weird cases we get http parse errors when using the `HEAD`
-        // method, so when that happens try a GET request.
-        // See:
-        // https://github.com/mikeal/request/issues/350
-        // https://github.com/joyent/node/issues/4863
-        reqOpt.method = 'GET';
-        request.get(reqOpt, function (err, res) {
-          //if (err) { return cb(new dn.RequestError(err)); }
-          handleResponse(err, res);
-        });
-      //} else if (err) {
-      //  cb(new dn.RequestError(err));
-      } else {
-        handleResponse(err, res);
-      }
+      // Pass err as result so we don't abort other requests running in
+      // parallel.
+      if (err) { return cb(null, err); }
+      cb(null, _.pick(res, [ 'statusCode', 'headers' ]));
     });
   }
 
@@ -203,10 +180,10 @@ dn.baseurl = function (domain, cb) {
   var naked = isWww ? domain.slice(4) : domain;
 
   async.parallel({
-    'https-naked': async.apply(head, 'https://' + naked),
-    'https-www': async.apply(head, 'https://' + www),
-    'http-naked': async.apply(head, 'http://' + naked),
-    'http-www': async.apply(head, 'http://' + www)
+    'https-naked': async.apply(get, 'https://' + naked),
+    'https-www': async.apply(get, 'https://' + www),
+    'http-naked': async.apply(get, 'http://' + naked),
+    'http-www': async.apply(get, 'http://' + www)
   }, cb);
 };
 
