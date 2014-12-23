@@ -115,7 +115,11 @@ function parseRecords(records) {
 
 function ensureParsedDomain(input) {
   if (_.isString(input)) {
-    return psl.parse(input);
+    var parsed = psl.parse(input);
+    if (parsed.error) {
+      throw new dn.ParseError(parsed.error);
+    }
+    return parsed;
   }
   
   if (_.isObject(input)) {
@@ -265,13 +269,14 @@ dn.dns = function (domain, cb) {
 //
 dn.baseurl = function (domain, cb) {
   function get(uri, cb) {
+    var start = Date.now();
     var reqOpt = {
       // Use GET as not all servers implement HEAD
       method: 'GET',
       url: uri,
       followRedirect: false,
       gzip: true,
-      timeout: 30 * 1000,
+      timeout: 20 * 1000,
       strictSSL: true
     };
 
@@ -279,10 +284,16 @@ dn.baseurl = function (domain, cb) {
       // Pass err as result so we don't abort other requests running in
       // parallel.
       if (err) { return cb(null, err); }
-      cb(null, _.pick(res, [ 'statusCode', 'headers' ]));
+      cb(null, {
+        url: uri,
+        responseTime: Date.now() - start,
+        statusCode: res.statusCode,
+        headers: res.headers
+      });
     });
   }
 
+  var parsed = ensureParsedDomain(domain);
   var isWww = /^www\./.test(domain);
   var www = isWww ? domain : 'www.' + domain;
   var naked = isWww ? domain.slice(4) : domain;
@@ -292,7 +303,10 @@ dn.baseurl = function (domain, cb) {
     'https-www': async.apply(get, 'https://' + www),
     'http-naked': async.apply(get, 'http://' + naked),
     'http-www': async.apply(get, 'http://' + www)
-  }, cb);
+  }, function (err, results) {
+    if (err) { return cb(err); }
+    cb(null, results);
+  });
 };
 
 
