@@ -11,6 +11,24 @@ var psl = require('psl');
 var _ = require('lodash');
 
 
+var definedTypes = [
+  'A',
+  'AAAA',
+  'NS',
+  'CNAME',
+  'PTR',
+  'NAPTR',
+  'TXT',
+  'MX',
+  'SRV',
+  'SOA',
+  //'TLSA'
+];
+
+
+var defaultServer = '208.67.222.222';
+
+
 //
 // Public API
 //
@@ -95,6 +113,26 @@ function parseRecords(records) {
   });
 }
 
+function ensureParsedDomain(input) {
+  if (_.isString(input)) {
+    return psl.parse(input);
+  }
+  
+  if (_.isObject(input)) {
+    var isParsedDomain = _.reduce([
+      'input', 'tld', 'sld', 'domain', 'subdomain', 'listed'
+    ], function (memo, prop) {
+      if (!input.hasOwnProperty(prop)) { return false; }
+      return memo;
+    }, true);
+    if (isParsedDomain) {
+      return input;
+    }
+  }
+
+  throw new TypeError('input must be either a string or a psl parsed object');
+}
+
 
 //
 // Dig up DNS records.
@@ -103,49 +141,92 @@ dn.dig = function (domain/*, type, server, cb*/) {
   var args = _.toArray(arguments).slice(1);
   var cb = args.pop();
   var type = args.shift() || 'ANY';
-  var server = args.shift() || '208.67.222.222';
-  var q = dns.Question({ name: domain, type: type });
-  var req = dns.Request({ question: q, server: server });
-  // TODO: HANDLE ERRORS!!!
-  req.on('timeout', function () {});
-  req.on('message', function (err, msg) {
-    //console.log(err, msg);
-    cb(null, {
-      answer: parseRecords(msg.answer),
-      authority: parseRecords(msg.authority),
-      additional: parseRecords(msg.additional)
+  var server = args.shift() || defaultServer;
+  var types = type.split(',');
+
+  if (type === 'ANY') {
+    types = definedTypes;
+  }
+
+  async.map(types, function (type, cb) {
+    var q = dns.Question({ name: domain, type: type });
+    var req = dns.Request({
+      question: q,
+      server: server,
+      //timeout: 5000,
+      cache: false
     });
+
+    req.on('timeout', function () {
+      cb(new Error('DNS request timed out'));
+    });
+
+    req.on('message', function (err, msg) {
+      if (err) { return cb(err); }
+      cb(null, {
+        answer: parseRecords(msg.answer),
+        authority: parseRecords(msg.authority),
+        additional: parseRecords(msg.additional)
+      });
+    });
+
+    req.send();
+  }, function (err, result) {
+    if (err) { return cb(err); }
+    cb(null, result.reduce(function (memo, item) {
+      memo.answer = memo.answer.concat(item.answer);
+      memo.additional = memo.additional.concat(item.additional);
+      item.authority.forEach(function (record) {
+        var found = _.find(memo.authority, function (memoItem) {
+          var mType = memoItem.type;
+          var rType = record.type;
+          var mPrimary = memoItem.primary;
+          var rPrimary = record.primary;
+          return mType === 'SOA' && mType === rType && mPrimary === rPrimary;
+        });
+        if (!found) {
+          memo.authority.push(record);
+        }
+      });
+      return memo;
+    }, { answer: [], authority: [], additional: [] }));
   });
-  req.send();
 };
 
 
 //
 // Get authority name server for domain name.
 //
+// Arguments:
+//
+// * `domain`: Either a String or a `psl` "parsed" object.
+// * `callback`
+//
 dn.soa = function (domain, cb) {
-  function resolvePrimary(answer) {
-    async.map(answer, function (record, cb) {
-      dns.resolve(record.primary, function (err, addresses) {
-        record.addresses = addresses;
-        cb(null, record);
-      });
-    }, cb);
+  function resolvePrimary(soa) {
+    dns.resolve(soa.primary, function (err, addresses) {
+      if (err) { return cb(err); }
+      soa.addresses = addresses;
+      cb(null, soa);
+    });
   }
 
-  dn.dig(domain, 'SOA', '208.67.222.222', function (err, data) {
+  var parsed = ensureParsedDomain(domain);
+
+  dn.dig(parsed.domain, 'SOA', null, function (err, data) {
     if (err) { return cb(err); }
-    if (data.answer.length) {
-      resolvePrimary(data.answer);
-    } else if (data.authority.length) {
-      var soa = data.authority.reduce(function (memo, record) {
-        if (record.type === 'SOA') { return record; }
-        return memo;
-      }, undefined);
-      resolvePrimary([ soa ], cb);
-    } else {
-      //console.error(data);
-    }
+    var authority = data.authority || [];
+    var answer = data.answer || [];
+
+    // First we try to get SOA from answer array.
+    var soa = answer.reduce(function (memo, record) {
+      if (record.type === 'SOA') { return record; }
+      return memo;
+    }, undefined);
+
+    if (soa) { return resolvePrimary(soa, cb); }
+
+    cb();
   });
 };
 
@@ -154,9 +235,27 @@ dn.soa = function (domain, cb) {
 // Dig up DNS records for domain.
 //
 dn.dns = function (domain, cb) {
-  dn.soa(domain, function (err, soa) {
+  function handleDigCallback(server) {
+    return function (err, data) {
+      if (err) { return cb(err); }
+      data.server = server || defaultServer;
+      cb(null, data);
+    };
+  }
+
+  var parsed = ensureParsedDomain(domain);
+
+  dn.soa(parsed, function (err, soa) {
     if (err) { return cb(err); }
-    dn.dig(domain, 'ANY', soa[0].addresses[0], cb);
+    if (!soa || !soa.addresses || !soa.addresses.length) {
+      return dn.dig(domain, 'ANY', null, handleDigCallback());
+    }
+    dn.dig(domain, 'ANY', soa.addresses[0], function (err, data) {
+      if (err) {
+        return dn.dig(domain, 'ANY', null, handleDigCallback());
+      }
+      handleDigCallback(soa.addresses[0])(null, data);
+    });
   });
 };
 
