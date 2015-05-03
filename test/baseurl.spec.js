@@ -7,7 +7,7 @@ describe('dn.baseurl()', function () {
   this.timeout(30000);
 
   it('should throw when domain is not String or psl parsed obj', function () {
-    [ null, undefined, 1, [], new Date, function () {}, {} ].forEach(function (val) {
+    [ null, undefined, 1, [], new Date(), function () {}, {} ].forEach(function (val) {
       assert.throws(function () {
         dn.baseurl(val, function (err, data) {});
       }, function (err) {

@@ -51,16 +51,6 @@ Parse domain using `psl`.
 var parsed = dn.parse('mydomain.co.uk');
 ```
 
-### `dn.probe( domain, callback )`
-
-Diagnose domain. This will run `dn.parse()` then `dn.dns()` and finally `dn.baseurl()`.
-
-```js
-dn.probe('foo.bar.com', function (err, info) {
-  //...
-});
-```
-
 ### `dn.soa( domain, callback )`
 
 Get authority name server for domain name.
@@ -93,7 +83,6 @@ baseurl          Figure out baseurl.
 dig              Dig up DNS records. ie: "dn dig foo.com MX"
 dns              Dig up "any" DNS records from authority.
 parse            Parse domain name using "psl".
-probe            Diagnose domain (parse -> dns -> baseurl).
 soa              Get Authority name server for domain.
 whois            Query public WHOIS database for domain.
 

@@ -9,12 +9,6 @@ var argv = minimist(process.argv.slice(2));
 var cmd = argv._.shift();
 var domain = argv._.shift();
 
-// Default command.
-if (!domain) {
-  domain = cmd;
-  cmd = 'probe';
-}
-
 if (argv.v || argv.version) {
   console.log(pkg.version);
   process.exit(0);
@@ -28,7 +22,6 @@ if (argv.v || argv.version) {
     'dig              Dig up DNS records. ie: "' + pkg.name + ' dig foo.com MX"',
     'dns              Dig up "any" DNS records from authority.',
     'parse            Parse domain name using "psl".',
-    'probe            Diagnose domain (parse -> dns -> baseurl).',
     'soa              Get Authority name server for domain.',
     'whois            Query public WHOIS database for domain.',
     '',

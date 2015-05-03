@@ -11,27 +11,26 @@
     "dn": "./bin/cli.js"
   },
   "scripts": {
-    "test": "grunt test --verbose"
+    "test": "gulp test"
   },
   "author": "Lupo Montero",
   "license": "MIT",
   "dependencies": {
     "async": "^0.9.0",
-    "lodash": "^2.4.1",
-    "minimist": "^1.1.0",
+    "lodash": "^3.8.0",
+    "minimist": "^1.1.1",
     "native-dns": "^0.7.0",
-    "psl": "^1.1.2",
-    "request": "^2.45.0"
+    "psl": "^1.1.4",
+    "request": "^2.55.0"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-contrib-jshint": "^0.10.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-shell": "^1.1.1",
-    "istanbul": "^0.3.2",
-    "mocha": "^2.0.1",
-    "nock": "^0.52.4",
-    "rewire": "^2.1.0",
-    "sinon": "^1.10.3"
+    "gulp": "^3.8.11",
+    "gulp-istanbul": "^0.8.1",
+    "gulp-jshint": "^1.10.0",
+    "gulp-mocha": "^2.0.1",
+    "jshint-stylish": "^1.0.2",
+    "nock": "^1.7.1",
+    "rewire": "^2.3.3",
+    "sinon": "^1.14.1"
   }
 }
