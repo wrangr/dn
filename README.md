@@ -1,6 +1,8 @@
 # dn (Domain Name)
 
-[![Build Status](https://magnum.travis-ci.com/wrangr/dn.svg?token=4uyuoxi9qhvAfjzUTB6y&branch=master)](https://magnum.travis-ci.com/wrangr/dn)
+[![Build Status](https://travis-ci.org/wrangr/dn.svg?branch=master)](https://travis-ci.org/wrangr/dn)
+[![Dependency Status](https://david-dm.org/wrangr/dn.svg?style=flat)](https://david-dm.org/wrangr/dn)
+[![devDependency Status](https://david-dm.org/wrangr/dn/dev-status.png)](https://david-dm.org/wrangr/dn#info=devDependencies)
 
 ## Installation
 
@@ -94,5 +96,5 @@ Options:
 --json           Output minimised JSON (good for machines).
 --jsonpretty     Output human readable JSON.
 
-wrangr 2014
+wrangr 2015
 ```
