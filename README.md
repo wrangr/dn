@@ -7,10 +7,7 @@
 ## Installation
 
 ```sh
-git clone https://github.com/wrangr/dn.git
-cd ./dn
-npm install
-npm link
+npm install dn
 ```
 
 ## API
@@ -76,6 +73,9 @@ dn.whois('foo.com', function (err, data) {
 ## CLI
 
 ```
+➜  npm install -g dn
+...
+
 ➜  dn
 Usage: dn [ options ] [ <command> ] <domain-name>
 

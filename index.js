@@ -267,7 +267,47 @@ dn.dns = function (domain, cb) {
 //
 // Figure out base url.
 //
-dn.baseurl = function (domain, cb) {
+dn.baseurl = function (domainOrUrl, cb) {
+  if (!domainOrUrl || typeof domainOrUrl !== 'string') {
+    throw new TypeError('First argument to dn.baseurl() must be a non-empty string');
+  }
+
+  var matches = /^([a-z0-9+\.\-]+):/i.exec(domainOrUrl);
+  if (!matches || matches.length < 2) {
+    domainOrUrl = 'http://' + domainOrUrl;
+  } else if ([ 'http', 'https' ].indexOf(matches[1]) === -1) {
+    throw new Error('Unsupported scheme: ' + matches[1]);
+  }
+
+  var urlObj = url.parse(domainOrUrl);
+  if (!urlObj.hostname) {
+    throw new Error('Invalid URL');
+  }
+
+  var parsed = psl.parse(urlObj.hostname);
+  if (!parsed.listed || !parsed.domain) {
+    throw new Error('Invalid domain name');
+  }
+
+  var domain = parsed.domain;
+  if (parsed.subdomain) {
+    domain = parsed.subdomain + '.' + domain;
+  }
+
+  var isWww = /^www\./.test(domain);
+  var www = isWww ? domain : 'www.' + domain;
+  var naked = isWww ? domain.slice(4) : domain;
+
+  async.parallel({
+    'https-naked': async.apply(get, 'https://' + naked + urlObj.path),
+    'https-www': async.apply(get, 'https://' + www + urlObj.path),
+    'http-naked': async.apply(get, 'http://' + naked + urlObj.path),
+    'http-www': async.apply(get, 'http://' + www + urlObj.path)
+  }, function (err, results) {
+    if (err) { return cb(err); }
+    cb(null, processResults(results));
+  });
+
   function get(uri, cb) {
     var start = Date.now();
     var reqOpt = {
@@ -283,7 +323,10 @@ dn.baseurl = function (domain, cb) {
     request(reqOpt, function (err, res) {
       // Pass err as result so we don't abort other requests running in
       // parallel.
-      if (err) { return cb(null, err); }
+      if (err) {
+        err.url = uri;
+        return cb(null, err);
+      }
       cb(null, {
         url: uri,
         responseTime: Date.now() - start,
@@ -293,20 +336,34 @@ dn.baseurl = function (domain, cb) {
     });
   }
 
-  var parsed = ensureParsedDomain(domain);
-  var isWww = /^www\./.test(domain);
-  var www = isWww ? domain : 'www.' + domain;
-  var naked = isWww ? domain.slice(4) : domain;
+  function processResults(results) {
+    var ok = [], redirect = [], error = [];
 
-  async.parallel({
-    'https-naked': async.apply(get, 'https://' + naked),
-    'https-www': async.apply(get, 'https://' + www),
-    'http-naked': async.apply(get, 'http://' + naked),
-    'http-www': async.apply(get, 'http://' + www)
-  }, function (err, results) {
-    if (err) { return cb(err); }
-    cb(null, results);
-  });
+    Object.keys(results).forEach(function (key) {
+      var result = results[key];
+      result.key = key;
+      if (result.statusCode === 200) {
+        ok.push(result);
+      } else if ([ 301, 302, 307 ].indexOf(result.statusCode) >= 0) {
+        redirect.push(result);
+      } else {
+        error.push(result);
+      }
+    });
+
+    var primary = ok.reduce(function (memo, result) {
+      var keyParts = result.key.split('-');
+      if (memo) {
+        var memoKeyParts = memo.key.split('-');
+        if (memoKeyParts[1] === 'www' && isWww) { return memo; }
+        if (memoKeyParts[0] + ':' === urlObj.protocol) { return memo; }
+      }
+      return result;
+    }, null);
+
+    return { ok: ok, redirect: redirect, error: error, primary: primary };
+  }
+
 };
 
 
@@ -338,41 +395,5 @@ dn.whois = function (domain, cb) {
       invokeCb(null, responseText);
     });
   });
-};
-
-
-//
-// Probe a domain name, this will parse, check dns, baseurl and
-// check agains our good practice and common problems checklist.
-//
-dn.probe = function (domain, cb) {
-
-  var info = { input: domain };
-  var parsed = psl.parse(domain);
-
-  if (parsed.error) {
-    process.nextTick(function () {
-      cb(new dn.ParseError(parsed.error));
-    });
-    return;
-  }
-
-  if (!parsed.listed) {
-    process.nextTick(function () {
-      cb(new dn.ParseError('PARSE_ENOTLISTED'));
-    });
-  }
-
-  async.auto({
-    dns: async.apply(dn.dns, domain),
-    baseurl: [ 'dns', async.apply(dn.baseurl, domain) ]
-  }, function (err, results) {
-    if (err) { return cb(err); }
-    Object.keys(results).forEach(function (k) {
-      info[k] = results[k];
-    });
-    cb(null, info);
-  });
-
 };
 

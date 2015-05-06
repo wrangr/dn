@@ -11,7 +11,7 @@ describe('dn.baseurl()', function () {
       assert.throws(function () {
         dn.baseurl(val, function (err, data) {});
       }, function (err) {
-        return err instanceof TypeError && /a string or a psl parsed object/i.test(err);
+        return err instanceof TypeError && /string/i.test(err);
       });
     });
   });
@@ -20,26 +20,35 @@ describe('dn.baseurl()', function () {
     assert.throws(function () {
       dn.baseurl('^%$Bbysyg&^T*&^..siui');
     }, function (err) {
-      //console.log(err);
-      return err instanceof dn.ParseError;
+      return /invalid url/i.test(err.message);
     });
   });
 
-  it('should handle domain with 4 baseurls (and warn)', function (done) {
+  it('should pick primary based on input', function (done) {
     nock('http://foo.com').get('/').reply(200, 'Hello Foo', {});
     nock('http://www.foo.com').get('/').reply(200, 'Hello Foo', {});
     nock('https://foo.com').get('/').reply(200, 'Hello Foo', {});
     nock('https://www.foo.com').get('/').reply(200, 'Hello Foo', {});
-    dn.baseurl('foo.com', function (err, data) {
+    dn.baseurl('https://foo.com', function (err, data) {
       assert(!err);
-      console.log(data);
+      assert.equal(data.primary.key, 'https-naked');
+      assert.equal(data.primary.url, 'https://foo.com/');
       done();
     });
   });
 
-  it('should handle domain with 2 baseurls (http and https)');
-
-  it('should handle domain with naked and www (warn)');
+  it('should handle site URL with subdir', function (done) {
+    nock('http://foo.com').get('/bar').reply(200, 'Hello Foo', {});
+    nock('http://www.foo.com').get('/bar').reply(200, 'Hello Foo', {});
+    nock('https://foo.com').get('/bar').reply(200, 'Hello Foo', {});
+    nock('https://www.foo.com').get('/bar').reply(200, 'Hello Foo', {});
+    dn.baseurl('www.foo.com/bar', function (err, data) {
+      assert(!err);
+      assert.equal(data.primary.key, 'https-www');
+      assert.equal(data.primary.url, 'https://www.foo.com/bar');
+      done();
+    });
+  });
 
   it('should handle domain with single baseurl and 2 redirects (https invalid cert)', function (done) {
     nock('http://wrangr.com').get('/').reply(301, 'wrangr', { location: 'https://wrangr.com' });
@@ -48,7 +57,7 @@ describe('dn.baseurl()', function () {
     //nock('https://www.wrangr.com').get('/').reply(200, 'wrangr', { location: 'https://wrangr.com' });
     dn.baseurl('wrangr.com', function (err, data) {
       assert(!err);
-      console.log(data);
+      //console.log(data);
       done();
     });
   });
