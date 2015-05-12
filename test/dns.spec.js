@@ -12,8 +12,10 @@ describe('dn.dns()', function () {
       assert.ok(_.isArray(data.answer));
       assert.equal(data.answer.length, 0);
       assert.ok(_.isArray(data.authority));
-      assert.equal(data.authority.length, 1);
-      assert.equal(data.authority[0].type, 'SOA');
+      assert.ok(data.authority.length > 0);
+      data.authority.forEach(function (record) {
+        assert.equal(record.type, 'SOA');
+      });
       done();
     });
   });
