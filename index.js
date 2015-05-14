@@ -375,12 +375,24 @@ dn.whois = function (domain, cb) {
   var cname = tld + '.whois-servers.net';
 
   function invokeCb(err, data) {
-    cb(null, err || data);
+    cb(err, data);
     cb = function () {}; // Prevent calling more than once.
   }
 
+  function noAuthorityError() {
+    invokeCb(new Error('No known WHOIS server found for .' + tld));
+  }
+
   dns.resolveCname(cname, function (err, addresses) {
-    if (err) { return invokeCb(err); }
+    if (err && err.code === 'ENOTFOUND') {
+      return noAuthorityError();
+    } else if (err) {
+      return invokeCb(err);
+    }
+
+    if (!addresses || !addresses.length) {
+      return noAuthorityError();
+    }
 
     var responseText = '';
     var socket = net.connect(43, addresses[0], function () {
