@@ -20,7 +20,7 @@
     "lodash": "^3.8.0",
     "minimist": "^1.1.1",
     "native-dns": "^0.7.0",
-    "psl": "^1.1.4",
+    "psl": "^1.1.5",
     "request": "^2.55.0"
   },
   "devDependencies": {
