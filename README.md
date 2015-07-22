@@ -20,6 +20,10 @@ Send HTTP and HTTPS GET requests to domain both using `www` and without it so we
 dn.baseurl('foo.com', function (err, data) {
   //...
 });
+
+dn.baseurl('https://foo.com', { strictSSL: false }, function (err, data) {
+  //...
+});
 ```
 
 ### `dn.dig( domain, rtype, [server,] callback )`
