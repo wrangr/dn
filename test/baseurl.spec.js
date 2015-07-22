@@ -29,7 +29,7 @@ describe('dn.baseurl()', function () {
     nock('http://www.foo.com').get('/').reply(200, 'Hello Foo', {});
     nock('https://foo.com').get('/').reply(200, 'Hello Foo', {});
     nock('https://www.foo.com').get('/').reply(200, 'Hello Foo', {});
-    dn.baseurl('https://foo.com', function (err, data) {
+    dn.baseurl('https://foo.com', { strictSSL: false }, function (err, data) {
       assert(!err);
       assert.equal(data.primary.key, 'https-naked');
       assert.equal(data.primary.url, 'https://foo.com/');
@@ -42,7 +42,7 @@ describe('dn.baseurl()', function () {
     nock('http://www.foo.com').get('/bar').reply(200, 'Hello Foo', {});
     nock('https://foo.com').get('/bar').reply(200, 'Hello Foo', {});
     nock('https://www.foo.com').get('/bar').reply(200, 'Hello Foo', {});
-    dn.baseurl('www.foo.com/bar', function (err, data) {
+    dn.baseurl('www.foo.com/bar', { strictSSL: false }, function (err, data) {
       assert(!err);
       assert.equal(data.primary.key, 'https-www');
       assert.equal(data.primary.url, 'https://www.foo.com/bar');

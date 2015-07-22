@@ -267,9 +267,18 @@ dn.dns = function (domain, cb) {
 //
 // Figure out base url.
 //
-dn.baseurl = function (domainOrUrl, cb) {
+dn.baseurl = function (domainOrUrl, opt, cb) {
   if (!domainOrUrl || typeof domainOrUrl !== 'string') {
     throw new TypeError('First argument to dn.baseurl() must be a non-empty string');
+  }
+
+  if (arguments.length < 3) {
+    cb = opt;
+    opt = {};
+  }
+
+  if (opt.strictSSL !== false) {
+    opt.strictSSL = true;
   }
 
   var matches = /^([a-z0-9+\.\-]+):/i.exec(domainOrUrl);
@@ -317,7 +326,7 @@ dn.baseurl = function (domainOrUrl, cb) {
       followRedirect: false,
       gzip: true,
       timeout: 20 * 1000,
-      strictSSL: true
+      strictSSL: opt.strictSSL
     };
 
     request(reqOpt, function (err, res) {
