@@ -12,7 +12,7 @@ npm install dn
 
 ## API
 
-### `dn.baseurl( domain, callback )`
+### `dn.baseurl( domain, [options,] callback )`
 
 Send HTTP and HTTPS GET requests to domain both using `www` and without it so we can figure out what's the site's base URL.
 
