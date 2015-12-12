@@ -1,20 +1,31 @@
-var dn = require('../');
+'use strict';
 
-describe.skip('dn.dig()', function () {
 
-  it('should...', function (done) {
-    dn.dig('github.com', 'ANY',  function (err, data) {
+const Dn = require('../');
+
+
+describe.skip('Dn.dig()', () => {
+
+
+  it('should...', (done) => {
+
+    Dn.dig('github.com', 'ANY',  (err, data) => {
+
       console.log(err, data);
       done();
     });
   });
 
-  it('should...', function (done) {
-    dn.dig('wrangr.com', 'ANY',  function (err, data) {
+
+  it('should...', (done) => {
+
+    Dn.dig('wrangr.com', 'ANY',  (err, data) => {
+
       console.log(err, data);
       done();
     });
   });
+
 
 });
 

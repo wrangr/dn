@@ -1,17 +1,23 @@
+'use strict';
+
+
 //
 // Deps
 //
-var util = require('util');
-var url = require('url');
-var net = require('net');
-var dns = require('native-dns');
-var request = require('request');
-var async = require('async');
-var psl = require('psl');
-var _ = require('lodash');
+const Util = require('util');
+const Url = require('url');
+const Net = require('net');
+const Dns = require('native-dns');
+const Request = require('request');
+const Async = require('async');
+const Psl = require('psl');
+const _ = require('lodash');
 
 
-var definedTypes = [
+const internals = {};
+
+
+internals.definedTypes = [
   'A',
   'AAAA',
   'NS',
@@ -21,19 +27,19 @@ var definedTypes = [
   'TXT',
   'MX',
   'SRV',
-  'SOA',
+  'SOA'//,
   //'TLSA'
 ];
 
 
-var defaultServer = '208.67.222.222';
+internals.defaultServer = '208.67.222.222';
 
 
 //
 // Public API
 //
 
-var dn = module.exports = {};
+const dn = module.exports = {};
 
 
 //
@@ -41,9 +47,11 @@ var dn = module.exports = {};
 //
 
 // Copy error codes from `psl`
-_.each(psl.errorCodes, function (v, k) {
+_.each(Psl.errorCodes, (v, k) => {
+
   dn['PARSE_' + k] = v;
 });
+
 
 dn.PARSE_ENOTLISTED = 'Domain name doesnt belong to a known public suffix';
 dn.DNS_NS_ENOTFOUND = 'No name servers found for domain';
@@ -55,12 +63,14 @@ dn.REQUEST_ECONNREFUSED = 'Connection refused by server';
 // Parse Error
 //
 dn.ParseError = function ParseError(obj) {
+
   Error.call(this);
   Error.captureStackTrace(this, arguments.callee);
   if (_.isString(obj)) {
     this.code = obj;
     this.message = dn[obj];
-  } else {
+  }
+  else {
     this.message = obj.message;
     this.code = obj.code;
   }
@@ -68,18 +78,21 @@ dn.ParseError = function ParseError(obj) {
   this.blame = 'caller';
 };
 
-util.inherits(dn.ParseError, Error);
+Util.inherits(dn.ParseError, Error);
+
 
 //
 // DNS Error
 //
 dn.DNSError = function DNSError(code, blame) {
+
   Error.call(this);
   Error.captureStackTrace(this, arguments.callee);
   if (dn[code]) {
     this.message = dn[code];
     this.code = code;
-  } else {
+  }
+  else {
     this.message = 'DNS Error.';
     this.code = code;
   }
@@ -87,111 +100,139 @@ dn.DNSError = function DNSError(code, blame) {
   this.blame = blame || 'target';
 };
 
-util.inherits(dn.DNSError, Error);
+Util.inherits(dn.DNSError, Error);
+
 
 dn.RequestError = function RequestError(err) {
+
   Error.call(this);
   Error.captureStackTrace(this, arguments.callee);
-  var longCode = 'REQUEST_' + err.code;
+  const longCode = 'REQUEST_' + err.code;
   this.message = dn[longCode] || err.message;
   this.code = longCode;
   this.kind = 'request';
   if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
     this.blame = 'target';
-  } else {
+  }
+  else {
     this.blame = 'network';
   }
 };
 
-util.inherits(dn.RequestError, Error);
+Util.inherits(dn.RequestError, Error);
 
 
-function parseRecords(records) {
-  return records.map(function (record) {
-    record.type = dns.consts.QTYPE_TO_NAME[record.type];
-    return _.omit(record, [ 'class' ]);
+internals.parseRecords = function (records) {
+
+  return records.map((record) => {
+
+    record.type = Dns.consts.QTYPE_TO_NAME[record.type];
+    return _.omit(record, ['class']);
   });
-}
+};
 
-function ensureParsedDomain(input) {
+
+internals.ensureParsedDomain = function (input) {
+
   if (_.isString(input)) {
-    var parsed = psl.parse(input);
+    const parsed = Psl.parse(input);
     if (parsed.error) {
       throw new dn.ParseError(parsed.error);
     }
     return parsed;
   }
-  
+
   if (_.isObject(input)) {
-    var isParsedDomain = _.reduce([
+    const isParsedDomain = _.reduce([
       'input', 'tld', 'sld', 'domain', 'subdomain', 'listed'
-    ], function (memo, prop) {
-      if (!input.hasOwnProperty(prop)) { return false; }
+    ], (memo, prop) => {
+
+      if (!input.hasOwnProperty(prop)) {
+        return false;
+      }
       return memo;
     }, true);
+
     if (isParsedDomain) {
       return input;
     }
   }
 
   throw new TypeError('input must be either a string or a psl parsed object');
-}
+};
 
 
 //
 // Dig up DNS records.
 //
 dn.dig = function (domain/*, type, server, cb*/) {
-  var args = _.toArray(arguments).slice(1);
-  var cb = args.pop();
-  var type = args.shift() || 'ANY';
-  var server = args.shift() || defaultServer;
-  var types = type.split(',');
+
+  const args = _.toArray(arguments).slice(1);
+  const cb = args.pop();
+  const type = args.shift() || 'ANY';
+  const server = args.shift() || internals.defaultServer;
+  let types = type.split(',');
 
   if (type === 'ANY') {
-    types = definedTypes;
+    types = internals.definedTypes;
   }
 
-  async.map(types, function (type, cb) {
-    var q = dns.Question({ name: domain, type: type });
-    var req = dns.Request({
+  Async.map(types, (type, cb) => {
+
+    const q = Dns.Question({ name: domain, type: type });
+    const req = Dns.Request({
       question: q,
       server: server,
       //timeout: 5000,
       cache: false
     });
 
-    req.on('timeout', function () {
+    req.on('timeout', () => {
+
       cb(new Error('DNS request timed out'));
     });
 
-    req.on('message', function (err, msg) {
-      if (err) { return cb(err); }
+    req.on('message', (err, msg) => {
+
+      if (err) {
+        return cb(err);
+      }
+
       cb(null, {
-        answer: parseRecords(msg.answer),
-        authority: parseRecords(msg.authority),
-        additional: parseRecords(msg.additional)
+        answer: internals.parseRecords(msg.answer),
+        authority: internals.parseRecords(msg.authority),
+        additional: internals.parseRecords(msg.additional)
       });
     });
 
     req.send();
-  }, function (err, result) {
-    if (err) { return cb(err); }
-    cb(null, result.reduce(function (memo, item) {
+  }, (err, result) => {
+
+    if (err) {
+      return cb(err);
+    }
+
+    cb(null, result.reduce((memo, item) => {
+
       memo.answer = memo.answer.concat(item.answer);
       memo.additional = memo.additional.concat(item.additional);
-      item.authority.forEach(function (record) {
-        var found = _.find(memo.authority, function (memoItem) {
-          var mType = memoItem.type;
-          var rType = record.type;
-          var mPrimary = memoItem.primary;
-          var rPrimary = record.primary;
+
+      item.authority.forEach((record) => {
+
+        const found = _.find(memo.authority, (memoItem) => {
+
+          const mType = memoItem.type;
+          const rType = record.type;
+          const mPrimary = memoItem.primary;
+          const rPrimary = record.primary;
           return mType === 'SOA' && mType === rType && mPrimary === rPrimary;
         });
+
         if (!found) {
           memo.authority.push(record);
         }
       });
+
       return memo;
     }, { answer: [], authority: [], additional: [] }));
   });
@@ -207,28 +248,43 @@ dn.dig = function (domain/*, type, server, cb*/) {
 // * `callback`
 //
 dn.soa = function (domain, cb) {
-  function resolvePrimary(soa) {
-    dns.resolve(soa.primary, function (err, addresses) {
-      if (err) { return cb(err); }
+
+  const resolvePrimary = function (soa) {
+
+    Dns.resolve(soa.primary, (err, addresses) => {
+
+      if (err) {
+        return cb(err);
+      }
+
       soa.addresses = addresses;
       cb(null, soa);
     });
-  }
+  };
 
-  var parsed = ensureParsedDomain(domain);
+  const parsed = internals.ensureParsedDomain(domain);
 
-  dn.dig(parsed.domain, 'SOA', null, function (err, data) {
-    if (err) { return cb(err); }
-    var authority = data.authority || [];
-    var answer = data.answer || [];
+  dn.dig(parsed.domain, 'SOA', null, (err, data) => {
+
+    if (err) {
+      return cb(err);
+    }
+
+    //const authority = data.authority || [];
+    const answer = data.answer || [];
 
     // First we try to get SOA from answer array.
-    var soa = answer.reduce(function (memo, record) {
-      if (record.type === 'SOA') { return record; }
+    const soa = answer.reduce((memo, record) => {
+
+      if (record.type === 'SOA') {
+        return record;
+      }
       return memo;
     }, undefined);
 
-    if (soa) { return resolvePrimary(soa, cb); }
+    if (soa) {
+      return resolvePrimary(soa, cb);
+    }
 
     cb();
   });
@@ -239,22 +295,33 @@ dn.soa = function (domain, cb) {
 // Dig up DNS records for domain.
 //
 dn.dns = function (domain, cb) {
-  function handleDigCallback(server) {
+
+  const handleDigCallback = function (server) {
+
     return function (err, data) {
-      if (err) { return cb(err); }
-      data.server = server || defaultServer;
+
+      if (err) {
+        return cb(err);
+      }
+      data.server = server || internals.defaultServer;
       cb(null, data);
     };
-  }
+  };
 
-  var parsed = ensureParsedDomain(domain);
+  const parsed = internals.ensureParsedDomain(domain);
 
-  dn.soa(parsed, function (err, soa) {
-    if (err) { return cb(err); }
+  dn.soa(parsed, (err, soa) => {
+
+    if (err) {
+      return cb(err);
+    }
+
     if (!soa || !soa.addresses || !soa.addresses.length) {
       return dn.dig(domain, 'ANY', null, handleDigCallback());
     }
-    dn.dig(domain, 'ANY', soa.addresses[0], function (err, data) {
+
+    dn.dig(domain, 'ANY', soa.addresses[0], (err, data) => {
+
       if (err) {
         return dn.dig(domain, 'ANY', null, handleDigCallback());
       }
@@ -268,6 +335,7 @@ dn.dns = function (domain, cb) {
 // Figure out base url.
 //
 dn.baseurl = function (domainOrUrl, opt, cb) {
+
   if (!domainOrUrl || typeof domainOrUrl !== 'string') {
     throw new TypeError('First argument to dn.baseurl() must be a non-empty string');
   }
@@ -281,45 +349,37 @@ dn.baseurl = function (domainOrUrl, opt, cb) {
     opt.strictSSL = true;
   }
 
-  var matches = /^([a-z0-9+\.\-]+):/i.exec(domainOrUrl);
+  const matches = /^([a-z0-9+\.\-]+):/i.exec(domainOrUrl);
   if (!matches || matches.length < 2) {
     domainOrUrl = 'http://' + domainOrUrl;
-  } else if ([ 'http', 'https' ].indexOf(matches[1]) === -1) {
+  }
+  else if (['http', 'https'].indexOf(matches[1]) === -1) {
     throw new Error('Unsupported scheme: ' + matches[1]);
   }
 
-  var urlObj = url.parse(domainOrUrl);
+  const urlObj = Url.parse(domainOrUrl);
   if (!urlObj.hostname) {
     throw new Error('Invalid URL');
   }
 
-  var parsed = psl.parse(urlObj.hostname);
+  const parsed = Psl.parse(urlObj.hostname);
   if (!parsed.listed || !parsed.domain) {
     throw new Error('Invalid domain name');
   }
 
-  var domain = parsed.domain;
+  let domain = parsed.domain;
   if (parsed.subdomain) {
     domain = parsed.subdomain + '.' + domain;
   }
 
-  var isWww = /^www\./.test(domain);
-  var www = isWww ? domain : 'www.' + domain;
-  var naked = isWww ? domain.slice(4) : domain;
+  const isWww = /^www\./.test(domain);
+  const www = isWww ? domain : 'www.' + domain;
+  const naked = isWww ? domain.slice(4) : domain;
 
-  async.parallel({
-    'https-naked': async.apply(get, 'https://' + naked + urlObj.path),
-    'https-www': async.apply(get, 'https://' + www + urlObj.path),
-    'http-naked': async.apply(get, 'http://' + naked + urlObj.path),
-    'http-www': async.apply(get, 'http://' + www + urlObj.path)
-  }, function (err, results) {
-    if (err) { return cb(err); }
-    cb(null, processResults(results));
-  });
+  const get = function (uri, cb) {
 
-  function get(uri, cb) {
-    var start = Date.now();
-    var reqOpt = {
+    const start = Date.now();
+    const reqOpt = {
       // Use GET as not all servers implement HEAD
       method: 'GET',
       url: uri,
@@ -329,13 +389,15 @@ dn.baseurl = function (domainOrUrl, opt, cb) {
       strictSSL: opt.strictSSL
     };
 
-    request(reqOpt, function (err, res) {
+    Request(reqOpt, (err, res) => {
+
       // Pass err as result so we don't abort other requests running in
       // parallel.
       if (err) {
         err.url = uri;
         return cb(null, err);
       }
+
       cb(null, {
         url: uri,
         responseTime: Date.now() - start,
@@ -343,36 +405,58 @@ dn.baseurl = function (domainOrUrl, opt, cb) {
         headers: res.headers
       });
     });
-  }
+  };
 
-  function processResults(results) {
-    var ok = [], redirect = [], error = [];
+  const processResults = function (results) {
 
-    Object.keys(results).forEach(function (key) {
-      var result = results[key];
+    const ok = [];
+    const redirect = [];
+    const error = [];
+
+    Object.keys(results).forEach((key) => {
+
+      const result = results[key];
       result.key = key;
       if (result.statusCode === 200) {
         ok.push(result);
-      } else if ([ 301, 302, 307 ].indexOf(result.statusCode) >= 0) {
+      }
+      else if ([301, 302, 307].indexOf(result.statusCode) >= 0) {
         redirect.push(result);
-      } else {
+      }
+      else {
         error.push(result);
       }
     });
 
-    var primary = ok.reduce(function (memo, result) {
-      var keyParts = result.key.split('-');
+    const primary = ok.reduce((memo, result) => {
+
       if (memo) {
-        var memoKeyParts = memo.key.split('-');
-        if (memoKeyParts[1] === 'www' && isWww) { return memo; }
-        if (memoKeyParts[0] + ':' === urlObj.protocol) { return memo; }
+        const memoKeyParts = memo.key.split('-');
+        if (memoKeyParts[1] === 'www' && isWww) {
+          return memo;
+        }
+        if (memoKeyParts[0] + ':' === urlObj.protocol) {
+          return memo;
+        }
       }
       return result;
     }, null);
 
     return { ok: ok, redirect: redirect, error: error, primary: primary };
-  }
+  };
 
+  Async.parallel({
+    'https-naked': Async.apply(get, 'https://' + naked + urlObj.path),
+    'https-www': Async.apply(get, 'https://' + www + urlObj.path),
+    'http-naked': Async.apply(get, 'http://' + naked + urlObj.path),
+    'http-www': Async.apply(get, 'http://' + www + urlObj.path)
+  }, (err, results) => {
+
+    if (err) {
+      return cb(err);
+    }
+    cb(null, processResults(results));
+  });
 };
 
 
@@ -380,22 +464,27 @@ dn.baseurl = function (domainOrUrl, opt, cb) {
 // Query public WHOIS databases.
 //
 dn.whois = function (domain, cb) {
-  var tld = domain.substring(domain.lastIndexOf('.') + 1);
-  var cname = tld + '.whois-servers.net';
 
-  function invokeCb(err, data) {
+  const tld = domain.substring(domain.lastIndexOf('.') + 1);
+  const cname = tld + '.whois-servers.net';
+
+  const invokeCb = function (err, data) {
+
     cb(err, data);
     cb = function () {}; // Prevent calling more than once.
-  }
+  };
 
-  function noAuthorityError() {
+  const noAuthorityError = function () {
+
     invokeCb(new Error('No known WHOIS server found for .' + tld));
-  }
+  };
 
-  dns.resolveCname(cname, function (err, addresses) {
+  Dns.resolveCname(cname, (err, addresses) => {
+
     if (err && err.code === 'ENOTFOUND') {
       return noAuthorityError();
-    } else if (err) {
+    }
+    else if (err) {
       return invokeCb(err);
     }
 
@@ -403,16 +492,23 @@ dn.whois = function (domain, cb) {
       return noAuthorityError();
     }
 
-    var responseText = '';
-    var socket = net.connect(43, addresses[0], function () {
+    let responseText = '';
+    const socket = Net.connect(43, addresses[0], () => {
+
       socket.end(domain + '\r\n', 'ascii');
     });
+
     socket.setEncoding('ascii');
+
     socket.on('error', invokeCb);
-    socket.on('data', function onData(chunk) {
+
+    socket.on('data', (chunk) => {
+
       responseText += chunk;
     });
-    socket.on('close', function onClose() {
+
+    socket.on('close', () => {
+
       invokeCb(null, responseText);
     });
   });

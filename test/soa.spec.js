@@ -1,43 +1,60 @@
-var assert = require('assert');
-var dn = require('../');
+'use strict';
 
-function assertSOA(obj) {
-  assert.equal(obj.type, 'SOA');
-  assert.equal(typeof obj.name, 'string');
-  assert.equal(typeof obj.ttl, 'number');
-  assert.equal(typeof obj.primary, 'string');
-  assert.equal(typeof obj.admin, 'string');
-  assert.equal(typeof obj.serial, 'number');
-  assert.equal(typeof obj.refresh, 'number');
-  assert.equal(typeof obj.retry, 'number');
-  assert.equal(typeof obj.expiration, 'number');
-  assert.equal(typeof obj.minimum, 'number');
-  assert.equal(typeof obj.addresses.length, 'number');
-  obj.addresses.forEach(function (address) {
-    var parts = address.split('.');
-    assert.equal(parts.length, 4);
-    parts.forEach(function (part) {
-      assert.ok(/^\d{1,3}$/.test(part));
+
+const Assert = require('assert');
+const Dn = require('../');
+
+
+const assertSOA = function (obj) {
+
+  Assert.equal(obj.type, 'SOA');
+  Assert.equal(typeof obj.name, 'string');
+  Assert.equal(typeof obj.ttl, 'number');
+  Assert.equal(typeof obj.primary, 'string');
+  Assert.equal(typeof obj.admin, 'string');
+  Assert.equal(typeof obj.serial, 'number');
+  Assert.equal(typeof obj.refresh, 'number');
+  Assert.equal(typeof obj.retry, 'number');
+  Assert.equal(typeof obj.expiration, 'number');
+  Assert.equal(typeof obj.minimum, 'number');
+  Assert.equal(typeof obj.addresses.length, 'number');
+
+  obj.addresses.forEach((address) => {
+
+    const parts = address.split('.');
+    Assert.equal(parts.length, 4);
+    parts.forEach((part) => {
+
+      Assert.ok(/^\d{1,3}$/.test(part));
     });
   });
-}
+};
 
-describe('dn.soa()', function () {
 
-  it('should get google.com\'s SOA record', function (done) {
-    dn.soa('google.com', function (err, data) {
-      assert.ok(!err);
+describe('Dn.soa()', () => {
+
+
+  it('should get google.com\'s SOA record', (done) => {
+
+    Dn.soa('google.com', (err, data) => {
+
+      Assert.ok(!err);
+      Assert.equal(data.name, 'google.com');
+
       assertSOA(data);
-      assert.equal(data.name, 'google.com');
       done();
     });
   });
 
-  it('should deal with subdomains (espn.go.com)', function (done) {
-    dn.soa('espn.go.com', function (err, data) {
-      assert.ok(!err);
+
+  it('should deal with subdomains (espn.go.com)', (done) => {
+
+    Dn.soa('espn.go.com', (err, data) => {
+
+      Assert.ok(!err);
+      Assert.equal(data.name, 'go.com');
+
       assertSOA(data);
-      assert.equal(data.name, 'go.com');
       done();
     });
   });

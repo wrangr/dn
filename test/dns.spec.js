@@ -1,39 +1,55 @@
-var assert = require('assert');
-var _ = require('lodash');
-var dn = require('../');
+'use strict';
 
-describe('dn.dns()', function () {
+
+const Assert = require('assert');
+const _ = require('lodash');
+const Dn = require('../');
+
+
+describe('Dn.dns()', function () {
 
   this.timeout(5000);
 
-  it('should get empty answer when no records', function (done) {
-    dn.dns('1234567890-abs-askjn-12jn-sdjk.co.uk', function (err, data) {
-      assert.ok(!err);
-      assert.ok(_.isArray(data.answer));
-      assert.equal(data.answer.length, 0);
-      assert.ok(_.isArray(data.authority));
-      assert.ok(data.authority.length > 0);
-      data.authority.forEach(function (record) {
-        assert.equal(record.type, 'SOA');
+
+  it('should get empty answer when no records', (done) => {
+
+    Dn.dns('1234567890-abs-askjn-12jn-sdjk.co.uk', (err, data) => {
+
+      Assert.ok(!err);
+      Assert.ok(_.isArray(data.answer));
+      Assert.equal(data.answer.length, 0);
+      Assert.ok(_.isArray(data.authority));
+      Assert.ok(data.authority.length > 0);
+
+      data.authority.forEach((record) => {
+
+        Assert.equal(record.type, 'SOA');
       });
+
       done();
     });
   });
 
-  it('should get records for wrangr.com', function (done) {
-    dn.dns('wrangr.com', function (err, data) {
-      assert.ok(!err);
-      assert.ok(_.isArray(data.answer));
-      assert.ok(data.answer.length > 0);
+
+  it('should get records for wrangr.com', (done) => {
+
+    Dn.dns('wrangr.com', (err, data) => {
+
+      Assert.ok(!err);
+      Assert.ok(_.isArray(data.answer));
+      Assert.ok(data.answer.length > 0);
       done();
     });
   });
 
-  it('should get records for apple.com', function (done) {
-    dn.dns('apple.com', function (err, data) {
-      assert.ok(!err);
-      assert.ok(_.isArray(data.answer));
-      assert.ok(data.answer.length > 0);
+
+  it('should get records for apple.com', (done) => {
+
+    Dn.dns('apple.com', (err, data) => {
+
+      Assert.ok(!err);
+      Assert.ok(_.isArray(data.answer));
+      Assert.ok(data.answer.length > 0);
       //console.log(data.answer);
       done();
     });
