@@ -1,6 +1,6 @@
 {
   "name": "dn",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Domain name tools",
   "repository": {
     "type": "git",
@@ -34,5 +34,7 @@
     "rewire": "^2.5.1",
     "sinon": "^1.17.2"
   },
-  "engines" : { "node" : ">=5.0.0" }
+  "engines": {
+    "node": ">=5.0.0"
+  }
 }
