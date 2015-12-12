@@ -6,7 +6,6 @@
     "type": "git",
     "url": "git@github.com:wrangr/dn.git"
   },
-  "main": "index.js",
   "bin": {
     "dn": "./bin/cli.js"
   },
@@ -34,5 +33,6 @@
     "nock": "^3.4.0",
     "rewire": "^2.5.1",
     "sinon": "^1.17.2"
-  }
+  },
+  "engines" : { "node" : ">=5.0.0" }
 }
