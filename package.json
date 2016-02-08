@@ -15,24 +15,24 @@
   "author": "Lupo Montero",
   "license": "MIT",
   "dependencies": {
-    "async": "^1.5.0",
-    "lodash": "^3.9.3",
+    "async": "^1.5.2",
+    "lodash": "^4.3.0",
     "minimist": "^1.1.1",
     "native-dns": "^0.7.0",
-    "psl": "^1.1.8",
-    "request": "^2.67.0"
+    "psl": "^1.1.10",
+    "request": "^2.69.0"
   },
   "devDependencies": {
     "eslint": "^1.10.3",
-    "eslint-config-hapi": "^8.0.0",
+    "eslint-config-hapi": "^8.0.1",
     "eslint-plugin-hapi": "^4.0.0",
-    "gulp": "^3.8.11",
+    "gulp": "^3.9.1",
     "gulp-eslint": "^1.1.1",
     "gulp-istanbul": "^0.10.3",
     "gulp-mocha": "^2.2.0",
-    "nock": "^3.4.0",
+    "nock": "^7.0.2",
     "rewire": "^2.5.1",
-    "sinon": "^1.17.2"
+    "sinon": "^1.17.3"
   },
   "engines": {
     "node": ">=5.0.0"
