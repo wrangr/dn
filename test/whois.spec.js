@@ -1,20 +1,20 @@
 'use strict';
 
 
-const assert = require('assert');
-const dn = require('../');
+const Assert = require('assert');
+const Dn = require('../');
 
 
-describe('dn.whois()', () => {
+describe('Dn.whois()', () => {
 
 
   it('should fail when no whois server', (done) => {
 
-    dn.whois('armtalent.co.za', (err, data) => {
+    Dn.whois('armtalent.co.za', (err, data) => {
 
-      assert.ok(err instanceof Error);
-      assert.ok(/No known WHOIS server/i.test(err.message));
-      assert.ok(!data);
+      Assert.ok(err instanceof Error);
+      Assert.ok(/No known WHOIS server/i.test(err.message));
+      Assert.ok(!data);
       done();
     });
   });
@@ -22,16 +22,15 @@ describe('dn.whois()', () => {
 
   it('should get WHOIS data for known tld', (done) => {
 
-    dn.whois('google.co.uk', (err, data) => {
+    Dn.whois('google.co.uk', (err, data) => {
 
-      assert.ok(!err);
-      assert.equal(typeof data, 'string');
-      assert.ok(/google\.co\.uk/i.test(data));
-      assert.ok(/whois lookup/i.test(data));
+      Assert.ok(!err);
+      Assert.equal(typeof data, 'string');
+      Assert.ok(/google\.co\.uk/i.test(data));
+      Assert.ok(/whois lookup/i.test(data));
       done();
     });
   });
 
 
 });
-
