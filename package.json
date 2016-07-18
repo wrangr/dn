@@ -23,14 +23,14 @@
     "request": "^2.69.0"
   },
   "devDependencies": {
-    "eslint": "^1.10.3",
-    "eslint-config-hapi": "^8.0.1",
+    "eslint": "^3.1.0",
+    "eslint-config-hapi": "^9.1.0",
     "eslint-plugin-hapi": "^4.0.0",
     "gulp": "^3.9.1",
-    "gulp-eslint": "^1.1.1",
-    "gulp-istanbul": "^0.10.3",
+    "gulp-eslint": "^3.0.1",
+    "gulp-istanbul": "^1.0.0",
     "gulp-mocha": "^2.2.0",
-    "nock": "^7.0.2",
+    "nock": "^8.0.0",
     "rewire": "^2.5.1",
     "sinon": "^1.17.3"
   },
