@@ -15,7 +15,7 @@
   "author": "Lupo Montero",
   "license": "MIT",
   "dependencies": {
-    "async": "^1.5.2",
+    "async": "^2.0.0",
     "lodash": "^4.3.0",
     "minimist": "^1.1.1",
     "native-dns": "^0.7.0",
