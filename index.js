@@ -179,10 +179,10 @@ dn.dig = function (domain/*, type, server, cb*/) {
 
   Async.map(types, (type, cb) => {
 
-    const q = Dns.Question({ name: domain, type: type });
+    const q = Dns.Question({ name: domain, type });
     const req = Dns.Request({
       question: q,
-      server: server,
+      server,
       //timeout: 5000,
       cache: false
     });
@@ -442,7 +442,7 @@ dn.baseurl = function (domainOrUrl, opt, cb) {
       return result;
     }, null);
 
-    return { ok: ok, redirect: redirect, error: error, primary: primary };
+    return { ok, redirect, error, primary };
   };
 
   Async.parallel({
@@ -513,4 +513,3 @@ dn.whois = function (domain, cb) {
     });
   });
 };
-
