@@ -19,11 +19,11 @@
     "lodash": "^4.15.0",
     "minimist": "^1.1.1",
     "native-dns": "^0.7.0",
-    "psl": "^1.1.13",
+    "psl": "^1.1.14",
     "request": "^2.74.0"
   },
   "devDependencies": {
-    "eslint": "^3.3.1",
+    "eslint": "^3.5.0",
     "eslint-config-hapi": "^10.0.0",
     "eslint-plugin-hapi": "^4.0.0",
     "gulp": "^3.9.1",
